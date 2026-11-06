@@ -423,21 +423,38 @@ span[data-testid="stIconMaterial"] {
     background: #050816;
     border-bottom: 1px solid rgba(148, 163, 184, 0.14);
 }
-.xad-brand {
+.st-key-xad_brand {
     position: fixed;
     top: 0;
     left: var(--space-24);
     z-index: 999991;
-    display: flex;
-    align-items: center;
+    width: auto;
     height: 60px;
-    font-family: "IBM Plex Serif", serif;
+    justify-content: center;
+}
+.st-key-xad_brand a {
+    padding: 0;
+    background: transparent !important;
+}
+.st-key-xad_brand a p {
+    font-family: "IBM Plex Serif", serif !important;
     font-size: 1.125rem;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     white-space: nowrap;
     color: #D9B872;
-    pointer-events: none;
+    transition: opacity 160ms ease;
+}
+.st-key-xad_brand a em {
+    margin: 0 0.04em;
+    font-family: "IBM Plex Serif", serif !important;
+    font-weight: 500;
+    color: #F8FAFC;
+}
+@media (hover: hover) and (pointer: fine) {
+    .st-key-xad_brand a:hover p {
+        opacity: 0.75;
+    }
 }
 /* Le nom garde ses majuscules et minuscules partout. Le "at" se détache : minuscule, italique, blanc. */
 .xad-name {
@@ -478,18 +495,18 @@ span[data-testid="stIconMaterial"] {
     text-transform: uppercase;
 }
 [data-testid="stTopNav"] {
-    margin-left: 11rem;
-    margin-right: var(--space-16);
+    margin-left: 9.5rem;
+    margin-right: var(--space-8);
     justify-content: space-evenly;
 }
 [data-testid="stTopNavLink"] {
     height: 2.5rem;
-    padding: 0 0.625rem;
+    padding: 0 0.375rem;
 }
 [data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]) {
     font-size: 0.8125rem;
     font-weight: 500;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 /* Page active et survol : teinte or au lieu du bleu par défaut de Streamlit */
@@ -507,15 +524,18 @@ span[data-testid="stIconMaterial"] {
         display: none;
     }
     [data-testid="stTopNav"] {
-        margin-left: 11.5rem;
-        margin-right: var(--space-8);
+        margin-left: 8.5rem;
     }
     [data-testid="stTopNavLink"] {
-        padding: 0 0.375rem;
+        padding: 0 0.25rem;
     }
     [data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]) {
         font-size: 0.75rem;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.02em;
+    }
+    /* Sur un écran moyen, les boutons ajoutés par Streamlit Cloud (Share, Fork...) laissent la place aux onglets */
+    [data-testid="stToolbarActions"] {
+        display: none;
     }
 }
 /* Petit écran d'ordinateur : le menu se resserre pour garder toutes les pages sur la ligne */
@@ -537,7 +557,7 @@ span[data-testid="stIconMaterial"] {
     .xad-nav-glide {
         display: none;
     }
-    .xad-brand {
+    .st-key-xad_brand {
         left: 3.5rem;
     }
 }
@@ -1895,7 +1915,8 @@ MOTION_SCRIPT = """
     let glide = null;
     let hoveredLink = null;
     function moveGlide(link) {
-        if (!glide || !link) { return; }
+        if (!glide) { return; }
+        if (!link) { glide.style.opacity = "0"; return; }
         const box = link.getBoundingClientRect();
         const parent = glide.parentElement.getBoundingClientRect();
         glide.style.width = box.width + "px";
@@ -2873,7 +2894,8 @@ CLASS_PAGES = {
     )
     for category in ASSET_UNIVERSE
 }
-home_page = st.Page(render_home_page, title="Home", icon=":material/home:", default=True)
+# L'accueil n'est pas dans le menu : on y revient en cliquant sur le nom du site
+home_page = st.Page(render_home_page, title="Home", default=True, visibility="hidden")
 comparator_page = st.Page(render_comparator_page, title="Comparator", icon=":material/compare_arrows:", url_path="comparator")
 portfolio_page = st.Page(render_portfolio_page, title="Portfolio", icon=":material/account_balance_wallet:", url_path="portfolio")
 news_page = st.Page(render_news_page, title="News", icon=":material/newspaper:", url_path="news")
@@ -2894,8 +2916,9 @@ if not entered:
     render_landing()
     st.stop()
 
-# Nom du site, toujours visible à gauche de la barre du haut
-st.markdown(f'<div class="xad-brand">{BRAND_HTML}</div>', unsafe_allow_html=True)
+# Nom du site, toujours visible à gauche de la barre du haut. C'est un lien interne vers l'accueil : la session (portefeuille, sélections) est conservée.
+with st.container(key="xad_brand"):
+    st.page_link(home_page, label="DESK*at*H")
 
 # Animations communes à toutes les pages
 with st.container(key="xad_motion"):
