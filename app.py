@@ -237,16 +237,6 @@ BUND_SERIES = {
 }
 BUND_URL = "https://api.statistiken.bundesbank.de/rest/download/BBSIS/D.I.ZST.ZI.EUR.S1311.B.A604.{code}.R.A.A._Z._Z.A?format=csv&lang=en"
 
-# Icône de chaque page dans la barre de navigation (bibliothèque d'icônes Google Material)
-PAGE_ICONS = {
-    "Indices": ":material/public:",
-    "Equities": ":material/business:",
-    "Bonds": ":material/account_balance:",
-    "Commodities": ":material/oil_barrel:",
-    "Currencies": ":material/currency_exchange:",
-    "Rates": ":material/percent:",
-}
-
 # Accueil : l'actif de référence et la description de chaque classe d'actifs
 HOME_TILES = {
     "Indices": ("S&P 500", "Global equity benchmarks across the US, Europe and Japan."),
@@ -501,7 +491,7 @@ span[data-testid="stIconMaterial"] {
 }
 [data-testid="stTopNavLink"] {
     height: 2.5rem;
-    padding: 0 0.375rem;
+    padding: 0 0.875rem;
 }
 [data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]) {
     font-size: 0.8125rem;
@@ -520,9 +510,6 @@ span[data-testid="stIconMaterial"] {
 }
 /* Écran moyen : on retire les icônes pour garder toutes les pages visibles */
 @media (max-width: 1280px) {
-    [data-testid="stTopNavLink"] [data-testid="stIconMaterial"] {
-        display: none;
-    }
     [data-testid="stTopNav"] {
         margin-left: 8.5rem;
     }
@@ -768,9 +755,6 @@ span[data-testid="stIconMaterial"] {
 }
 
 /* Menu : une pastille dorée glisse d'un onglet à l'autre sous la souris */
-[data-testid="stTopNavLink"] [data-testid="stIconMaterial"] {
-    display: none;
-}
 .xad-nav-glide {
     position: absolute;
     top: 0;
@@ -2884,22 +2868,21 @@ if "show_onboarding" not in st.session_state:
 
 # NAVIGATION — barre en haut de la page
 
-# Accueil + une page par classe d'actifs + le Comparateur + le Portefeuille + les News. c=category fige la catégorie de chaque page (sinon les 6 afficheraient "Rates").
+# Accueil + les News + une page par classe d'actifs + le Comparateur + le Portefeuille. c=category fige la catégorie de chaque page (sinon les 6 afficheraient "Rates").
 CLASS_PAGES = {
     category: st.Page(
         lambda c=category: render_class_page(c),
         title=category,
-        icon=PAGE_ICONS[category],
         url_path=category.lower(),
     )
     for category in ASSET_UNIVERSE
 }
 # L'accueil n'est pas dans le menu : on y revient en cliquant sur le nom du site
 home_page = st.Page(render_home_page, title="Home", default=True, visibility="hidden")
-comparator_page = st.Page(render_comparator_page, title="Comparator", icon=":material/compare_arrows:", url_path="comparator")
-portfolio_page = st.Page(render_portfolio_page, title="Portfolio", icon=":material/account_balance_wallet:", url_path="portfolio")
-news_page = st.Page(render_news_page, title="News", icon=":material/newspaper:", url_path="news")
-all_pages = [home_page, *CLASS_PAGES.values(), comparator_page, portfolio_page, news_page]
+comparator_page = st.Page(render_comparator_page, title="Comparator", url_path="comparator")
+portfolio_page = st.Page(render_portfolio_page, title="Portfolio", url_path="portfolio")
+news_page = st.Page(render_news_page, title="News", url_path="news")
+all_pages = [home_page, news_page, *CLASS_PAGES.values(), comparator_page, portfolio_page]
 
 # À l'ouverture du site, on reste sur la page d'entrée tant que le visiteur n'a pas défilé jusqu'au bout. Elle n'est pas dans le menu : on n'y revient pas.
 entered = st.session_state.get("entered", False)
