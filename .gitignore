@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+app_deskath_v*.py
+app_refonte_*.py
+app_rendu_v1.py
