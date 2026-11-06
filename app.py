@@ -1056,21 +1056,98 @@ button:focus-visible, a:focus-visible {
     line-height: 1.6;
     text-wrap: balance;
 }
+/* Points d'étape : un seul point doré glisse d'une position à l'autre */
 .xad-dots {
-    text-align: center;
-    color: #334155;
-    font-size: 1.1rem;
-    letter-spacing: 0.3em;
-    margin: var(--space-16) 0;
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    width: fit-content;
+    margin: var(--space-16) auto;
 }
-.xad-dots .active {
+.xad-dot, .xad-dot-cursor {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+}
+.xad-dot {
+    background: #334155;
+}
+.xad-dot-cursor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: #D9B872;
+    transform: translateX(calc(var(--n, 0) * 1.25rem));
+    transition: transform 480ms var(--ease-out);
+}
+.xad-dots[data-step="1"] { --n: 1; }
+.xad-dots[data-step="2"] { --n: 2; }
+.xad-dots[data-step="3"] { --n: 3; }
+.xad-dots[data-step="4"] { --n: 4; }
+.xad-dots[data-step="5"] { --n: 5; }
+.xad-dots[data-step="6"] { --n: 6; }
+/* Roulement entre deux étapes : le vrai texte reste en place, invisible, et une copie animée passe par-dessus */
+.xad-step, .xad-step-title {
+    font-kerning: none;
+}
+.xad-step {
+    font-variant-numeric: tabular-nums;
+}
+.xad-rolling {
+    position: relative;
+    visibility: hidden;
+}
+.xad-roll-layer {
+    position: absolute;
+    inset: 0;
+    visibility: visible;
+}
+.xad-roll-layer .xad-name {
+    white-space: nowrap;
+}
+.xad-roll-word {
     display: inline-block;
-    color: #D9B872;
-    animation: xad-dot 280ms var(--ease-out) backwards;
+    white-space: nowrap;
 }
-@keyframes xad-dot {
-    from { transform: scale(0.5); opacity: 0.4; }
-    to { transform: none; opacity: 1; }
+.xad-roll-letters .xad-roll-word {
+    overflow: hidden;
+    vertical-align: top;
+}
+.xad-roll-ch {
+    display: inline-block;
+}
+.xad-roll-letters.xad-roll-in .xad-roll-ch:not(.xad-roll-still) {
+    animation: xad-roll-in 480ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 16ms);
+}
+.xad-roll-letters.xad-roll-out .xad-roll-ch:not(.xad-roll-still) {
+    animation: xad-roll-out 240ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 8ms);
+}
+.xad-roll-letters.xad-roll-out .xad-roll-still {
+    visibility: hidden;
+}
+.xad-roll-words.xad-roll-in .xad-roll-word {
+    animation: xad-word-in 420ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 12ms);
+}
+.xad-roll-words.xad-roll-out {
+    animation: xad-word-out 140ms ease both;
+}
+@keyframes xad-roll-in {
+    from { transform: translateY(105%); }
+    to { transform: none; }
+}
+@keyframes xad-roll-out {
+    from { transform: none; }
+    to { transform: translateY(-105%); }
+}
+@keyframes xad-word-in {
+    from { opacity: 0; transform: translateY(0.4em); filter: blur(2px); }
+    to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes xad-word-out {
+    to { opacity: 0; }
 }
 /* Hauteurs réservées : la fenêtre ne change pas de taille d'une étape à l'autre */
 .xad-step-title {
@@ -1126,8 +1203,8 @@ button:active {
     .xad-new, .xad-news-row {
         animation: xad-fade 200ms ease backwards;
     }
-    .xad-dots .active {
-        animation: none;
+    .xad-dot-cursor {
+        transition: none;
     }
     .xad-news-title {
         transform: none !important;
@@ -1515,13 +1592,13 @@ def show_onboarding():
     total = len(ONBOARDING_STEPS)
     title, text = ONBOARDING_STEPS[step]
 
-    dots = "".join('<span class="active">●</span>' if i == step else "●" for i in range(total))
+    dots = '<span class="xad-dot"></span>' * total
     st.markdown(
         f"""
         <div class="xad-step">STEP {step + 1} / {total}</div>
         <div class="xad-step-title">{title}</div>
         <div class="xad-step-text">{text}</div>
-        <div class="xad-dots">{dots}</div>
+        <div class="xad-dots" data-step="{step}">{dots}<span class="xad-dot-cursor"></span></div>
         """,
         unsafe_allow_html=True,
     )
@@ -2152,58 +2229,86 @@ MOTION_SCRIPT = """
         });
     }
 
-    // Visite guidée : d'une étape à l'autre, les lettres défilent puis se fixent de gauche à droite, comme les chiffres de l'accueil.
-    // L'animation réécrit seulement le contenu du texte, puis remet exactement le texte final.
-    const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    function scrambleNode(node, duration) {
-        const finalText = node.nodeValue;
-        let written = finalText;
-        const start = performance.now();
-        const timer = window.setInterval(function () {
-            // Si Streamlit a déjà affiché une autre étape, cette animation s'arrête
-            if (!node.isConnected || node.nodeValue !== written) { window.clearInterval(timer); return; }
-            const progress = Math.min(1, (performance.now() - start) / duration);
-            if (progress === 1) {
-                node.nodeValue = finalText;
-                window.clearInterval(timer);
-                return;
-            }
-            const settled = Math.floor(easeOut(progress) * finalText.length);
-            let built = finalText.slice(0, settled);
-            for (let i = settled; i !== finalText.length; i += 1) {
-                const original = finalText[i];
-                if (!/[A-Za-zÀ-ÿ0-9]/.test(original)) { built += original; continue; }
-                const letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
-                built += /[a-zà-ÿ]/.test(original) ? letter.toLowerCase() : /[0-9]/.test(original) ? String(Math.floor(Math.random() * 10)) : letter;
-            }
-            written = built;
-            node.nodeValue = built;
-        }, 28);
-    }
-    function scrambleText(element, duration) {
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-        while (walker.nextNode()) { scrambleNode(walker.currentNode, duration); }
-    }
-    // L'étape affichée se lit sur le point actif, le seul repère que l'animation ne réécrit pas
-    function currentStep() {
-        const active = document.querySelector('[role="dialog"] .xad-dots .active');
-        if (!active) { return null; }
+    // Visite guidée : d'une étape à l'autre, les lettres roulent comme un compteur.
+    // Le texte de Streamlit n'est jamais modifié : il reste invisible dessous et une copie découpée s'anime par-dessus.
+    const ROLLED = { counter: ".xad-step", title: ".xad-step-title", text: ".xad-step-text" };
+    function buildRollLayer(source, kind, direction, other) {
+        const layer = document.createElement("div");
+        const inWords = kind === "text";
+        layer.className = "xad-roll-layer xad-roll-" + direction + (inWords ? " xad-roll-words" : " xad-roll-letters");
+        const copy = source.cloneNode(true);
+        while (copy.firstChild) { layer.appendChild(copy.firstChild); }
+        const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) { nodes.push(walker.currentNode); }
+        let index = 0;
         let position = 0;
-        for (let node = active.previousSibling; node; node = node.previousSibling) { position += node.textContent.length; }
-        return position;
+        nodes.forEach(function (node) {
+            const pieces = document.createDocumentFragment();
+            node.nodeValue.split(" ").forEach(function (word, order) {
+                if (order !== 0) { pieces.appendChild(document.createTextNode(" ")); position += 1; }
+                if (word === "") { return; }
+                const box = document.createElement("span");
+                box.className = "xad-roll-word";
+                if (inWords) {
+                    box.style.setProperty("--i", index);
+                    box.textContent = word;
+                    index += 1;
+                } else {
+                    Array.from(word).forEach(function (character) {
+                        const letter = document.createElement("span");
+                        letter.className = "xad-roll-ch";
+                        letter.textContent = character;
+                        // Dans le compteur d'étape, seul le chiffre qui change bouge
+                        if (kind === "counter" && other[position] === character) { letter.classList.add("xad-roll-still"); }
+                        letter.style.setProperty("--i", index);
+                        box.appendChild(letter);
+                        index += 1;
+                        position += 1;
+                    });
+                }
+                pieces.appendChild(box);
+            });
+            node.replaceWith(pieces);
+        });
+        return layer;
+    }
+    function clearRoll(element) {
+        element.querySelectorAll(":scope > .xad-roll-layer").forEach(function (layer) { layer.remove(); });
+        element.classList.remove("xad-rolling");
+        window.clearTimeout(element.xadRollTimer);
+    }
+    function rollElement(element, previous, kind) {
+        const layerOut = buildRollLayer(previous, kind, "out", element.textContent);
+        const layerIn = buildRollLayer(element, kind, "in", previous.textContent);
+        element.classList.add("xad-rolling");
+        element.append(layerOut, layerIn);
+        element.xadRollTimer = window.setTimeout(function () { clearRoll(element); }, 1100);
     }
     let lastStep = null;
+    let lastCopies = null;
     function updateOnboarding() {
-        const step = currentStep();
+        const dots = document.querySelector('[role="dialog"] .xad-dots');
+        const step = dots ? dots.dataset.step : null;
         if (step === lastStep) { return; }
-        // À la première ouverture, on garde l'apparition douce ; ensuite ce sont les lettres qui bougent
+        const copies = {};
+        const elements = {};
+        Object.keys(ROLLED).forEach(function (kind) {
+            elements[kind] = document.querySelector('[role="dialog"] ' + ROLLED[kind]);
+            if (elements[kind]) {
+                clearRoll(elements[kind]);
+                copies[kind] = elements[kind].cloneNode(true);
+            }
+        });
+        // À la première ouverture, on garde l'apparition douce ; ensuite ce sont les lettres qui roulent
         if (step !== null && lastStep !== null && !reduced) {
-            scrambleText(document.querySelector('[role="dialog"] .xad-step'), 420);
-            scrambleText(document.querySelector('[role="dialog"] .xad-step-title'), 620);
-            scrambleText(document.querySelector('[role="dialog"] .xad-step-text'), 820);
+            Object.keys(ROLLED).forEach(function (kind) { rollElement(elements[kind], lastCopies[kind], kind); });
         }
         lastStep = step;
+        lastCopies = copies;
     }
+    // L'étape change parfois sans ajout d'élément : on surveille donc directement son repère
+    new MutationObserver(updateOnboarding).observe(document.body, { attributes: true, subtree: true, attributeFilter: ["data-step"] });
 
     function refresh() {
         setupGlide();
