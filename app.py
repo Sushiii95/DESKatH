@@ -1064,7 +1064,21 @@ button:focus-visible, a:focus-visible {
     margin: var(--space-16) 0;
 }
 .xad-dots .active {
+    display: inline-block;
     color: #D9B872;
+    animation: xad-dot 280ms var(--ease-out) backwards;
+}
+@keyframes xad-dot {
+    from { transform: scale(0.5); opacity: 0.4; }
+    to { transform: none; opacity: 1; }
+}
+/* Hauteurs réservées : la fenêtre ne change pas de taille d'une étape à l'autre */
+.xad-step-title {
+    min-height: 2.4em;
+    line-height: 1.2;
+}
+.xad-step-text {
+    min-height: 6.4em;
 }
 
 /* Finitions (règles d'Emil Kowalski) : retour visuel au clic, apparition douce de la visite */
@@ -1111,6 +1125,9 @@ button:active {
     }
     .xad-new, .xad-news-row {
         animation: xad-fade 200ms ease backwards;
+    }
+    .xad-dots .active {
+        animation: none;
     }
     .xad-news-title {
         transform: none !important;
@@ -2135,6 +2152,59 @@ MOTION_SCRIPT = """
         });
     }
 
+    // Visite guidée : d'une étape à l'autre, les lettres défilent puis se fixent de gauche à droite, comme les chiffres de l'accueil.
+    // L'animation réécrit seulement le contenu du texte, puis remet exactement le texte final.
+    const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    function scrambleNode(node, duration) {
+        const finalText = node.nodeValue;
+        let written = finalText;
+        const start = performance.now();
+        const timer = window.setInterval(function () {
+            // Si Streamlit a déjà affiché une autre étape, cette animation s'arrête
+            if (!node.isConnected || node.nodeValue !== written) { window.clearInterval(timer); return; }
+            const progress = Math.min(1, (performance.now() - start) / duration);
+            if (progress === 1) {
+                node.nodeValue = finalText;
+                window.clearInterval(timer);
+                return;
+            }
+            const settled = Math.floor(easeOut(progress) * finalText.length);
+            let built = finalText.slice(0, settled);
+            for (let i = settled; i !== finalText.length; i += 1) {
+                const original = finalText[i];
+                if (!/[A-Za-zÀ-ÿ0-9]/.test(original)) { built += original; continue; }
+                const letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
+                built += /[a-zà-ÿ]/.test(original) ? letter.toLowerCase() : /[0-9]/.test(original) ? String(Math.floor(Math.random() * 10)) : letter;
+            }
+            written = built;
+            node.nodeValue = built;
+        }, 28);
+    }
+    function scrambleText(element, duration) {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) { scrambleNode(walker.currentNode, duration); }
+    }
+    // L'étape affichée se lit sur le point actif, le seul repère que l'animation ne réécrit pas
+    function currentStep() {
+        const active = document.querySelector('[role="dialog"] .xad-dots .active');
+        if (!active) { return null; }
+        let position = 0;
+        for (let node = active.previousSibling; node; node = node.previousSibling) { position += node.textContent.length; }
+        return position;
+    }
+    let lastStep = null;
+    function updateOnboarding() {
+        const step = currentStep();
+        if (step === lastStep) { return; }
+        // À la première ouverture, on garde l'apparition douce ; ensuite ce sont les lettres qui bougent
+        if (step !== null && lastStep !== null && !reduced) {
+            scrambleText(document.querySelector('[role="dialog"] .xad-step'), 420);
+            scrambleText(document.querySelector('[role="dialog"] .xad-step-title'), 620);
+            scrambleText(document.querySelector('[role="dialog"] .xad-step-text'), 820);
+        }
+        lastStep = step;
+    }
+
     function refresh() {
         setupGlide();
         countStats();
@@ -2146,11 +2216,13 @@ MOTION_SCRIPT = """
     new MutationObserver(function () {
         // Les courbes sont traitées tout de suite, avant que le navigateur n'affiche le nouveau dessin
         updateCharts();
+        updateOnboarding();
         if (pending) { return; }
         pending = true;
         window.setTimeout(function () { pending = false; refresh(); }, 60);
     }).observe(document.body, { childList: true, subtree: true });
     refresh();
+    updateOnboarding();
 })();
 </script>
 """
@@ -2889,6 +2961,10 @@ entered = st.session_state.get("entered", False)
 current_page = st.navigation(all_pages, position="top" if entered else "hidden")
 is_home = current_page.url_path == ""
 
+# Animations communes à tout le site : chargées dès l'ouverture, car la visite guidée s'affiche sur la page d'entrée
+with st.container(key="xad_motion"):
+    st.html(MOTION_SCRIPT, unsafe_allow_javascript=True)
+
 # La visite s'ouvre à la première ouverture du site, sur la page d'entrée, ou dès qu'on clique sur "How it works".
 # On remet le drapeau à False tout de suite : fermer la fenêtre avec la croix ne la fait pas revenir.
 if st.session_state["show_onboarding"]:
@@ -2902,10 +2978,6 @@ if not entered:
 # Nom du site, toujours visible à gauche de la barre du haut. C'est un lien interne vers l'accueil : la session (portefeuille, sélections) est conservée.
 with st.container(key="xad_brand"):
     st.page_link(home_page, label="DESK*at*H")
-
-# Animations communes à toutes les pages
-with st.container(key="xad_motion"):
-    st.html(MOTION_SCRIPT, unsafe_allow_javascript=True)
 
 # Hors accueil, "Last updated" en haut de page (rempli après la page, cf. plus bas)
 last_updated_slot = st.empty() if not is_home else None
