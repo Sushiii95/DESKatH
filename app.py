@@ -254,7 +254,7 @@ HOME_TILES = {
     "Bonds": ("US Treasuries 7-10Y (IEF)", "Treasury and credit ETFs along the risk spectrum."),
 }
 
-# Home (écran du matin) : les tableaux et leurs instruments. Chaque type de ligne a son unité : % pour les prix, points de base pour les taux, points pour la volatilité.
+# Market Overview (écran du matin) : les tableaux et leurs instruments. Chaque type de ligne a son unité : % pour les prix, points de base pour les taux, points pour la volatilité.
 OVERVIEW_LEFT = {
     "Equity indices": ("price", {"S&P 500": "^GSPC", "Nasdaq 100": "^NDX", "Euro Stoxx 50": "^STOXX50E", "CAC 40": "^FCHI", "DAX": "^GDAXIP", "FTSE 100": "^FTSE", "Nikkei 225": "^N225"}),
     "Volatility (changes in points)": ("level", {"VIX": "^VIX", "MOVE": "^MOVE"}),
@@ -272,7 +272,7 @@ OVERVIEW_SPREADS = {
     "OAT - Bund 10Y": ("MFR10.AS", "BUND10Y"),
     "US - Bund 10Y": ("^TNX", "BUND10Y"),
 }
-# Bandeau du haut de la Home : l'essentiel d'un coup d'œil
+# Bandeau du haut de Market Overview : l'essentiel d'un coup d'œil
 OVERVIEW_HIGHLIGHTS = [("S&P 500", "price", "^GSPC"), ("Euro Stoxx 50", "price", "^STOXX50E"), ("US 10Y", "yield", "^TNX"), ("OAT 10Y", "yield", "MFR10.AS"), ("EUR/USD", "price", "EURUSD=X"), ("Brent", "price", "BZ=F"), ("VIX", "level", "^VIX")]
 OVERVIEW_MOVERS = 5
 OVERVIEW_HEADLINES = 6
@@ -403,7 +403,7 @@ ONBOARDING_STEPS = [
     (f"Welcome to {BRAND_HTML}",
      "A cross-asset market monitor: indices, equities, bonds, commodities, currencies and rates in one place."),
     ("Pick an asset class",
-     "Home is your morning overview of all markets. The Assets menu opens each class: Indices, Equities, Currencies, Rates, Commodities or Bonds."),
+     "Market Overview is your morning screen of all markets. The Assets menu opens each class: Indices, Equities, Currencies, Rates, Commodities or Bonds."),
     ("Build your chart",
      "Choose a period, then click an instrument: it appears on the chart straight away. Click it again to remove it."),
     ("Read the chart",
@@ -532,7 +532,7 @@ span[data-testid="stIconMaterial"] {
     justify-content: center;
     gap: var(--space-8);
 }
-/* Ordre affiché : Home, News, Assets, Comparator, Portfolio */
+/* Ordre affiché : Market Overview, News, Assets, Comparator, Portfolio */
 [data-testid="stTopNav"] > .rc-overflow-item:has([data-testid="stTopNavSection"]) { order: 2 !important; }
 [data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/comparator"]) { order: 3 !important; }
 [data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/portfolio"]) { order: 4 !important; }
@@ -1287,7 +1287,7 @@ button:focus-visible, a:focus-visible {
     min-height: 6.4em;
 }
 
-/* Home : écran dense, chiffres alignés, comme un écran de desk */
+/* Market Overview : écran dense, chiffres alignés, comme un écran de desk */
 .xad-ov-strip {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
@@ -2300,7 +2300,7 @@ MOTION_SCRIPT = """
         glide.style.opacity = "1";
     }
     function activeLink() {
-        // Menu ouvert, ou page d'une classe d'actifs : la pastille reste sur Assets. La page de présentation n'a pas de pastille.
+        // Menu ouvert, ou page d'une classe d'actifs : la pastille reste sur Assets. L'accueil n'a pas de pastille.
         const assets = document.querySelector('[data-testid="stTopNavSection"]');
         if (assets && assets.getAttribute("aria-expanded") === "true") { return assets; }
         const current = document.querySelector('[data-testid="stTopNavLink"][aria-current="page"]');
@@ -2725,7 +2725,7 @@ def render_home_page():
                     st.page_link(CLASS_PAGES[category], label=f"Open {category}", icon=":material/arrow_forward:")
 
 
-# HOME — ÉCRAN DU MATIN
+# MARKET OVERVIEW — ÉCRAN DU MATIN
 
 # Variation entre deux valeurs, dans l'unité du type de ligne. None si elle n'a pas de sens (cours négatif ou nul, comme le WTI en avril 2020).
 def change_between(previous, last, kind):
@@ -2780,7 +2780,7 @@ def overview_change_cell(change, kind):
     return f'<td class="{tone}">{text}</td>'
 
 
-# Un tableau de la Home. Une ligne sans données reste affichée avec des tirets : on voit tout de suite qu'il manque quelque chose.
+# Un tableau de Market Overview. Une ligne sans données reste affichée avec des tirets : on voit tout de suite qu'il manque quelque chose.
 def overview_table(title, kind, series_by_name):
     periods = ["1D", "1W", "MTD", "YTD", "1Y"]
     head = "".join(f"<th>{period}</th>" for period in periods)
@@ -2814,10 +2814,10 @@ def overview_movers(title, movers):
     )
 
 
-# Home : l'écran qu'un desk regarde le matin. Tous les marchés sur une page, sans clic : niveaux, variations, écarts de taux, mouvements du jour, titres de presse.
+# Market Overview : l'écran qu'un desk regarde le matin. Tous les marchés sur une page, sans clic : niveaux, variations, écarts de taux, mouvements du jour, titres de presse.
 def render_overview_page():
     st.session_state.pop("just_entered", None)
-    st.header("Market overview")
+    st.header("Market Overview")
 
     tickers = {ticker for _, assets in (*OVERVIEW_LEFT.values(), *OVERVIEW_RIGHT.values()) for ticker in assets.values()}
     tickers |= {ticker for pair in OVERVIEW_SPREADS.values() for ticker in pair}
@@ -3864,9 +3864,9 @@ CLASS_PAGES = {
     )
     for category in ASSET_UNIVERSE
 }
-# La Home du menu est l'écran du matin. La page de présentation n'est pas dans le menu : on y va en cliquant sur le nom du site.
-overview_page = st.Page(render_overview_page, title="Home", default=True)
-home_page = st.Page(render_home_page, title="DESKatH", url_path="desk", visibility="hidden")
+# L'accueil est la page d'arrivée après le défilement. Il n'est pas dans le menu : on y revient en cliquant sur le nom du site.
+home_page = st.Page(render_home_page, title="Home", default=True, visibility="hidden")
+overview_page = st.Page(render_overview_page, title="Market Overview", url_path="market-overview")
 comparator_page = st.Page(render_comparator_page, title="Comparator", url_path="comparator")
 portfolio_page = st.Page(render_portfolio_page, title="Portfolio", url_path="portfolio")
 news_page = st.Page(render_news_page, title="News", url_path="news")
@@ -3874,9 +3874,9 @@ news_page = st.Page(render_news_page, title="News", url_path="news")
 # À l'ouverture du site, on reste sur la page d'entrée tant que le visiteur n'a pas défilé jusqu'au bout. Elle n'est pas dans le menu : on n'y revient pas.
 entered = st.session_state.get("entered", False)
 # Les classes d'actifs sont regroupées dans le menu déroulant "Assets" ; le CSS place ce menu juste après News.
-navigation_menu = {"": [overview_page, home_page, news_page, comparator_page, portfolio_page], "Assets": list(CLASS_PAGES.values())}
+navigation_menu = {"": [home_page, overview_page, news_page, comparator_page, portfolio_page], "Assets": list(CLASS_PAGES.values())}
 current_page = st.navigation(navigation_menu, position="top" if entered else "hidden")
-is_home = current_page.url_path == "desk"
+is_home = current_page.url_path == ""
 
 # Animations communes à tout le site : chargées dès l'ouverture, car la visite guidée s'affiche sur la page d'entrée
 with st.container(key="xad_motion"):
@@ -3892,7 +3892,7 @@ if not entered:
     render_landing()
     st.stop()
 
-# Nom du site, toujours visible à gauche de la barre du haut. C'est un lien interne vers la page de présentation : la session (portefeuille, sélections) est conservée.
+# Nom du site, toujours visible à gauche de la barre du haut. C'est un lien interne vers l'accueil : la session (portefeuille, sélections) est conservée.
 with st.container(key="xad_brand"):
     st.page_link(home_page, label="DESK*at*H")
 
