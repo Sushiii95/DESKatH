@@ -56,6 +56,7 @@ EQUITY_GROUPS = {
         "Coca-Cola": "KO",
         "PepsiCo": "PEP",
         "McDonald's": "MCD",
+        "Nike": "NKE",
         "Walmart": "WMT",
         "Costco": "COST",
         "Disney": "DIS",
