@@ -518,6 +518,15 @@ span[data-testid="stIconMaterial"] {
 [data-testid="stTopNavSection"] {
     background-color: transparent !important;
 }
+/* Survol d'Assets : doré même si la pastille glissante n'est pas active, par exemple dans un onglet resté ouvert pendant une mise à jour */
+@media (hover: hover) and (pointer: fine) {
+    [data-testid="stTopNavSection"]:hover {
+        background-color: rgba(217, 184, 114, 0.14) !important;
+    }
+    .xad-glide-assets [data-testid="stTopNavSection"]:hover {
+        background-color: transparent !important;
+    }
+}
 [data-testid="stTopNavSection"] > div[aria-hidden] {
     display: flex;
     align-items: center;
@@ -2113,6 +2122,8 @@ MOTION_SCRIPT = """
             host.insertBefore(glide, nav);
             host.classList.add("xad-has-glide");
         }
+        // Ce repère indique que la pastille sait suivre le bouton Assets : le doré de secours s'efface alors
+        host.classList.add("xad-glide-assets");
         moveGlide(hoveredLink && hoveredLink.isConnected ? hoveredLink : activeLink());
     }
     document.addEventListener("pointerover", function (event) {
