@@ -175,13 +175,14 @@ ASSET_UNIVERSE = {
         "S&P 500": "^GSPC",
         "CAC 40": "^FCHI",
         "Euro Stoxx 50": "^STOXX50E",
-        "DAX": "^GDAXI",
+        "DAX": "^GDAXIP",
         "Nikkei 225": "^N225",
     },
     "Equities": merge_groups(EQUITY_GROUPS),
     "Currencies": merge_groups(CURRENCY_GROUPS),
     "Rates": {
         "US 3M T-Bill": "^IRX",
+        "US 2Y Treasury": "UST2Y",
         "US 5Y Treasury": "^FVX",
         "US 10Y Treasury": "^TNX",
         "US 30Y Treasury": "^TYX",
@@ -239,6 +240,10 @@ BUND_SERIES = {
 }
 BUND_URL = "https://api.statistiken.bundesbank.de/rest/download/BBSIS/D.I.ZST.ZI.EUR.S1311.B.A604.{code}.R.A.A._Z._Z.A?format=csv&lang=en"
 
+# Taux américains absents de Yahoo : courbe officielle du Trésor américain, un fichier public par année
+US_TREASURY_SERIES = {"UST2Y": "2 Yr"}
+TREASURY_URL = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{year}/all?type=daily_treasury_yield_curve&field_tdr_date_value={year}&page&_format=csv"
+
 # Accueil : l'actif de référence et la description de chaque classe d'actifs
 HOME_TILES = {
     "Indices": ("S&P 500", "Global equity benchmarks across the US, Europe and Japan."),
@@ -248,6 +253,34 @@ HOME_TILES = {
     "Commodities": ("Gold", "Precious metals, crude oil, natural gas and copper."),
     "Bonds": ("US Treasuries 7-10Y (IEF)", "Treasury and credit ETFs along the risk spectrum."),
 }
+
+# Home (écran du matin) : les tableaux et leurs instruments. Chaque type de ligne a son unité : % pour les prix, points de base pour les taux, points pour la volatilité.
+OVERVIEW_LEFT = {
+    "Equity indices": ("price", {"S&P 500": "^GSPC", "Nasdaq 100": "^NDX", "Euro Stoxx 50": "^STOXX50E", "CAC 40": "^FCHI", "DAX": "^GDAXIP", "FTSE 100": "^FTSE", "Nikkei 225": "^N225"}),
+    "Volatility (changes in points)": ("level", {"VIX": "^VIX", "MOVE": "^MOVE"}),
+    "Currencies": ("price", {"Dollar index": "DX-Y.NYB", "EUR/USD": "EURUSD=X", "GBP/USD": "GBPUSD=X", "USD/JPY": "USDJPY=X", "EUR/GBP": "EURGBP=X", "USD/CHF": "USDCHF=X"}),
+}
+OVERVIEW_RIGHT = {
+    "Government yields (changes in bp)": ("yield", {"US 2Y": "UST2Y", "US 10Y": "^TNX", "US 30Y": "^TYX", "Bund 2Y": "BUND2Y", "Bund 10Y": "BUND10Y", "OAT 10Y": "MFR10.AS"}),
+    "Commodities": ("price", {"Brent": "BZ=F", "WTI": "CL=F", "Gold": "GC=F", "Silver": "SI=F", "Copper": "HG=F", "Natural gas": "NG=F"}),
+    "Bond ETFs": ("price", {"US Treasuries 7-10Y (IEF)": "IEF", "US Investment Grade (LQD)": "LQD", "US High Yield (HYG)": "HYG"}),
+}
+# Écarts de taux en points de base : (taux long ou pays, taux court ou référence)
+OVERVIEW_SPREADS = {
+    "US 2s10s": ("^TNX", "UST2Y"),
+    "Bund 2s10s": ("BUND10Y", "BUND2Y"),
+    "OAT - Bund 10Y": ("MFR10.AS", "BUND10Y"),
+    "US - Bund 10Y": ("^TNX", "BUND10Y"),
+}
+# Bandeau du haut de la Home : l'essentiel d'un coup d'œil
+OVERVIEW_HIGHLIGHTS = [("S&P 500", "price", "^GSPC"), ("Euro Stoxx 50", "price", "^STOXX50E"), ("US 10Y", "yield", "^TNX"), ("OAT 10Y", "yield", "MFR10.AS"), ("EUR/USD", "price", "EURUSD=X"), ("Brent", "price", "BZ=F"), ("VIX", "level", "^VIX")]
+OVERVIEW_MOVERS = 5
+OVERVIEW_HEADLINES = 6
+
+# Indices de référence proposés dans Comparator et Portfolio : ticker et devise de cotation
+BENCHMARKS = {"S&P 500": ("^GSPC", "USD"), "Euro Stoxx 50": ("^STOXX50E", "EUR"), "CAC 40": ("^FCHI", "EUR"), "DAX": ("^GDAXIP", "EUR"), "FTSE 100": ("^FTSE", "GBP"), "Nikkei 225": ("^N225", "JPY")}
+# En dessous de cette durée (jours), annualiser un rendement n'aurait pas de sens
+MIN_DAYS_TO_ANNUALISE = 90
 
 # Nom du site. Le "at" central se détache du reste : DESK at Highest, DESK at Home.
 BRAND_HTML = '<span class="xad-name">DESK<span class="xad-at">at</span>H</span>'
@@ -370,15 +403,15 @@ ONBOARDING_STEPS = [
     (f"Welcome to {BRAND_HTML}",
      "A cross-asset market monitor: indices, equities, bonds, commodities, currencies and rates in one place."),
     ("Pick an asset class",
-     "Use the menu at the top of the page to open an asset class: Indices, Equities, Currencies, Rates, Commodities or Bonds."),
+     "Home is your morning overview of all markets. The Assets menu opens each class: Indices, Equities, Currencies, Rates, Commodities or Bonds."),
     ("Build your chart",
      "Choose a period, then click an instrument: it appears on the chart straight away. Click it again to remove it."),
     ("Read the chart",
      "Hover over the chart to see the exact value and the change since the start. Tick Short MA or Long MA under the chart to add moving averages."),
     ("Build your comparator",
-     "On the Comparator page, open an asset class and click its instruments, or tick Add to comparator under a chart."),
+     "On the Comparator page, click instruments from any asset class. The Risk tab adds volatility, drawdown, beta and correlations."),
     ("Track your portfolio",
-     "On the Portfolio page, search for a company, enter your purchase date and quantity, and follow your gains and losses."),
+     "On the Portfolio page, add a company, its purchase date and quantity, then follow your gains, dividends and performance against a benchmark."),
     ("Read the news",
      "On the News page, filter the latest headlines by section and click one to read the full article on its original site."),
 ]
@@ -499,10 +532,10 @@ span[data-testid="stIconMaterial"] {
     justify-content: center;
     gap: var(--space-8);
 }
-/* Ordre affiché : News, Assets, Comparator, Portfolio */
-[data-testid="stTopNav"] > .rc-overflow-item:has([data-testid="stTopNavSection"]) { order: 1 !important; }
-[data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/comparator"]) { order: 2 !important; }
-[data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/portfolio"]) { order: 3 !important; }
+/* Ordre affiché : Home, News, Assets, Comparator, Portfolio */
+[data-testid="stTopNav"] > .rc-overflow-item:has([data-testid="stTopNavSection"]) { order: 2 !important; }
+[data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/comparator"]) { order: 3 !important; }
+[data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/portfolio"]) { order: 4 !important; }
 [data-testid="stTopNavLink"], [data-testid="stTopNavSection"] {
     height: 2.5rem;
     padding: 0 0.875rem;
@@ -1254,6 +1287,115 @@ button:focus-visible, a:focus-visible {
     min-height: 6.4em;
 }
 
+/* Home : écran dense, chiffres alignés, comme un écran de desk */
+.xad-ov-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--space-8);
+    margin-bottom: var(--space-24);
+}
+.xad-ov-highlight {
+    padding: var(--space-12);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 10px;
+    background: rgba(14, 18, 35, 0.6);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+}
+.xad-ov-name {
+    color: #94A3B8;
+    font-size: 0.75rem;
+}
+.xad-ov-value {
+    color: #F1F5F9;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0.125rem 0;
+}
+.xad-ov-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-40);
+    align-items: start;
+}
+.xad-ov-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-24);
+    min-width: 0;
+}
+.xad-ov-gap {
+    margin-top: var(--space-24);
+}
+.xad-ov-title {
+    color: #D9B872;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-8);
+}
+.xad-ov-scroll {
+    overflow-x: auto;
+}
+table.xad-ov {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+}
+table.xad-ov th {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    background: transparent;
+    color: #94A3B8;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+}
+table.xad-ov td {
+    padding: 0.3125rem 0.5rem;
+    border: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    text-align: right;
+    white-space: nowrap;
+}
+table.xad-ov th:first-child, table.xad-ov td:first-child {
+    padding-left: 0;
+    text-align: left;
+    color: #E2E8F0;
+}
+table.xad-ov .xad-up, table.xad-ov .xad-down, table.xad-ov .xad-flat {
+    font-weight: 500;
+}
+.xad-ov-last {
+    color: #F1F5F9;
+    font-weight: 500;
+}
+.xad-ov-none {
+    color: #64748B;
+}
+@media (hover: hover) and (pointer: fine) {
+    table.xad-ov tbody tr:hover td {
+        background: rgba(217, 184, 114, 0.06);
+    }
+}
+@media (max-width: 960px) {
+    .xad-ov-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+/* Onglets du Comparator, dans le même style que le menu */
+[data-testid="stTab"] p {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
 /* Finitions (règles d'Emil Kowalski) : retour visuel au clic, apparition douce de la visite */
 button {
     transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease;
@@ -1481,7 +1623,7 @@ button:active {
 </style>
 """
 
-FOOTER_HTML = '<div class="xad-footer">Educational tool — not investment advice · Data: Yahoo Finance · by Louis DIGUET--GUYENNE</div>'
+FOOTER_HTML = '<div class="xad-footer">Educational tool — not investment advice · by Louis DIGUET--GUYENNE</div>'
 
 
 # FONCTIONS — DONNÉES
@@ -1493,7 +1635,7 @@ def download_intraday_close(ticker, start, end):
         start=max(start, date.today() - timedelta(days=729)),
         end=end + timedelta(days=1),
         interval="1h",
-        auto_adjust=True,
+        auto_adjust=False,
         progress=False,
     )
     if intraday.empty:
@@ -1540,12 +1682,62 @@ def download_bund_yield(ticker, start, end):
     return table[(table.index.date >= start) & (table.index.date <= end)]
 
 
-# Télécharge les cours de clôture quotidiens (ajustés des dividendes et splits) et renvoie aussi l'heure du téléchargement.
-# Les OAT et les Bund ont leur propre source (voir plus haut) ; leurs séries sont ajoutées au tableau, une colonne par instrument.
+# Yahoo publie parfois la clôture quotidienne avec retard (Europe et Asie surtout) : le dernier jour reste vide alors que le marché a fermé.
+# On complète ces trous récents avec la dernière cotation horaire de chaque jour. En cas d'échec, le tableau reste tel quel.
+def fill_late_closes(close, end):
+    if close.empty or end < date.today() - timedelta(days=1):
+        return close
+    newest = close.index[-1]
+    late = [ticker for ticker in close.columns if close[ticker].notna().any() and close[ticker].last_valid_index() < newest]
+    if not late:
+        return close
+    try:
+        hourly = yf.download(late, period="5d", interval="1h", auto_adjust=False, progress=False)
+    except Exception:
+        return close
+    if hourly.empty:
+        return close
+    quotes = hourly["Close"]
+    quotes = quotes.to_frame(name=late[0]) if isinstance(quotes, pd.Series) else quotes
+    # Les heures sont en temps universel : à cette heure, toutes les places concernées sont sur la même date
+    quotes.index = quotes.index.tz_convert(None) if quotes.index.tz is not None else quotes.index
+    filled = close.copy()
+    for ticker in late:
+        if ticker not in quotes:
+            continue
+        values = quotes[ticker].dropna()
+        by_day = values.groupby(values.index.normalize()).last()
+        for day, value in by_day[by_day.index > filled[ticker].last_valid_index()].items():
+            if day.date() <= end:
+                if day not in filled.index:
+                    filled = filled.reindex(filled.index.union([day]))
+                filled.loc[day, ticker] = value
+    return filled
+
+
+# Taux publié par le Trésor américain, année par année. En cas de problème, renvoie une série vide : l'actif sera signalé comme sans données.
+def download_treasury_yield(ticker, start, end):
+    frames = []
+    for year in range(start.year, end.year + 1):
+        request = urllib.request.Request(TREASURY_URL.format(year=year), headers={"User-Agent": "Mozilla/5.0 (Macintosh) DESKatH student project"})
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                frames.append(pd.read_csv(response, usecols=["Date", US_TREASURY_SERIES[ticker]]))
+        except (OSError, ValueError):
+            return pd.Series(dtype=float)
+    table = pd.concat(frames)
+    table["Date"] = pd.to_datetime(table["Date"], format="%m/%d/%Y", errors="coerce")
+    table["Yield"] = pd.to_numeric(table[US_TREASURY_SERIES[ticker]], errors="coerce")
+    table = table.dropna(subset=["Date", "Yield"]).set_index("Date")["Yield"].sort_index()
+    return table[(table.index.date >= start) & (table.index.date <= end)]
+
+
+# Télécharge les cours de clôture quotidiens, sans ajustement des dividendes : ce sont les cours réellement cotés, les mêmes sur toutes les pages. L'heure du téléchargement est aussi renvoyée.
+# Les OAT, les Bund et le taux US 2 ans ont leur propre source (voir plus haut) ; leurs séries sont ajoutées au tableau, une colonne par instrument.
 # @st.cache_data garde le résultat 1 h : relancer la même analyse ne retélécharge rien, et l'heure renvoyée reste celle du vrai téléchargement.
 @st.cache_data(ttl=3600, show_spinner=False)
 def download_close_prices(tickers, start, end):
-    market_tickers = [t for t in tickers if t not in OAT_LINES and t not in BUND_SERIES]
+    market_tickers = [t for t in tickers if t not in OAT_LINES and t not in BUND_SERIES and t not in US_TREASURY_SERIES]
     close = pd.DataFrame()
     if market_tickers:
         data = yf.download(
@@ -1553,7 +1745,7 @@ def download_close_prices(tickers, start, end):
             start=start,
             end=end + timedelta(days=1),
             interval="1d",
-            auto_adjust=True,
+            auto_adjust=False,
             progress=False,
         )
         if not data.empty:
@@ -1561,6 +1753,7 @@ def download_close_prices(tickers, start, end):
             # Un seul ticker peut renvoyer une Series au lieu d'un DataFrame : on harmonise.
             if isinstance(close, pd.Series):
                 close = close.to_frame(name=market_tickers[0])
+            close = fill_late_closes(close, end)
     fetched_at = datetime.now()
 
     extra_series = {}
@@ -1577,6 +1770,8 @@ def download_close_prices(tickers, start, end):
             )
         elif ticker in BUND_SERIES:
             extra_series[ticker] = download_bund_yield(ticker, start, end)
+        elif ticker in US_TREASURY_SERIES:
+            extra_series[ticker] = download_treasury_yield(ticker, start, end)
 
     for ticker, values in extra_series.items():
         if not values.empty:
@@ -2105,11 +2300,12 @@ MOTION_SCRIPT = """
         glide.style.opacity = "1";
     }
     function activeLink() {
-        // Menu ouvert, ou page d'une classe d'actifs : la pastille reste sur Assets. L'accueil ("/") n'a pas de pastille.
+        // Menu ouvert, ou page d'une classe d'actifs : la pastille reste sur Assets. La page de présentation n'a pas de pastille.
         const assets = document.querySelector('[data-testid="stTopNavSection"]');
         if (assets && assets.getAttribute("aria-expanded") === "true") { return assets; }
         const current = document.querySelector('[data-testid="stTopNavLink"][aria-current="page"]');
-        return current || (location.pathname === "/" ? null : assets);
+        const assetPages = ["/indices", "/equities", "/currencies", "/rates", "/commodities", "/bonds"];
+        return current || (assetPages.includes(location.pathname) ? assets : null);
     }
     function setupGlide() {
         const nav = document.querySelector('[data-testid="stTopNav"]');
@@ -2529,6 +2725,182 @@ def render_home_page():
                     st.page_link(CLASS_PAGES[category], label=f"Open {category}", icon=":material/arrow_forward:")
 
 
+# HOME — ÉCRAN DU MATIN
+
+# Variation entre deux valeurs, dans l'unité du type de ligne. None si elle n'a pas de sens (cours négatif ou nul, comme le WTI en avril 2020).
+def change_between(previous, last, kind):
+    if previous is None or pd.isna(previous):
+        return None
+    if kind == "price":
+        return last / previous - 1 if previous > 0 else None
+    if kind == "level":
+        return last - previous
+    return (last - previous) * 100
+
+
+# Dernière valeur et variations d'une série : veille, 1 semaine, depuis le début du mois, depuis le début de l'année, 1 an.
+# Chaque point de départ est la dernière cotation connue à cette date, sur le calendrier de l'instrument lui-même.
+def overview_figures(values, kind):
+    values = values.dropna()
+    if values.empty:
+        return None
+    last, day = values.iloc[-1], values.index[-1]
+
+    def value_at(target):
+        known = values.loc[:target]
+        return known.iloc[-1] if len(known) else None
+
+    starts = {
+        "1D": values.iloc[-2] if len(values) > 1 else None,
+        "1W": value_at(day - timedelta(days=7)),
+        "MTD": value_at(day.replace(day=1) - timedelta(days=1)),
+        "YTD": value_at(pd.Timestamp(day.year - 1, 12, 31)),
+        "1Y": value_at(day - pd.DateOffset(years=1)),
+    }
+    return {"last": last, "day": day, "changes": {period: change_between(start, last, kind) for period, start in starts.items()}}
+
+
+# Niveau affiché selon le type de ligne. Les paires de devises ont 4 décimales, sauf contre le yen.
+def overview_level(name, last, kind):
+    if kind == "yield":
+        return f"{last:.2f}%"
+    if kind == "spread":
+        return f"{last * 100:,.0f}"
+    if "/" in name and "JPY" not in name:
+        return f"{last:.4f}"
+    return f"{last:,.2f}"
+
+
+# Une variation mise en forme, en vert ou en rouge selon son signe
+def overview_change_cell(change, kind):
+    if change is None or pd.isna(change):
+        return '<td class="xad-ov-none">–</td>'
+    tone = "xad-up" if change > 0 else "xad-down" if change < 0 else "xad-flat"
+    text = f"{change:+.2%}" if kind == "price" else f"{change:+.1f}" if kind == "level" else f"{change:+.0f}"
+    return f'<td class="{tone}">{text}</td>'
+
+
+# Un tableau de la Home. Une ligne sans données reste affichée avec des tirets : on voit tout de suite qu'il manque quelque chose.
+def overview_table(title, kind, series_by_name):
+    periods = ["1D", "1W", "MTD", "YTD", "1Y"]
+    head = "".join(f"<th>{period}</th>" for period in periods)
+    rows = []
+    for name, values in series_by_name.items():
+        figures = overview_figures(values, kind)
+        if figures is None:
+            rows.append(f'<tr><td>{html.escape(name)}</td>' + '<td class="xad-ov-none">–</td>' * 7 + "</tr>")
+            continue
+        cells = "".join(overview_change_cell(figures["changes"][period], kind) for period in periods)
+        rows.append(
+            f'<tr><td>{html.escape(name)}</td><td class="xad-ov-last">{overview_level(name, figures["last"], kind)}</td>{cells}'
+            f'<td class="xad-ov-none">{figures["day"]:%d/%m}</td></tr>'
+        )
+    return (
+        f'<div class="xad-ov-block"><div class="xad-ov-title">{html.escape(title)}</div><div class="xad-ov-scroll"><table class="xad-ov">'
+        f'<thead><tr><th></th><th>Last</th>{head}<th>As of</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div></div>'
+    )
+
+
+# Plus fortes hausses ou baisses du jour parmi les actions du site
+def overview_movers(title, movers):
+    rows = "".join(
+        f'<tr><td>{html.escape(name)}</td><td class="xad-ov-last">{figures["last"]:,.2f}</td>'
+        f'{overview_change_cell(figures["changes"]["1D"], "price")}{overview_change_cell(figures["changes"]["YTD"], "price")}</tr>'
+        for name, figures in movers
+    )
+    return (
+        f'<div class="xad-ov-block"><div class="xad-ov-title">{title}</div><div class="xad-ov-scroll"><table class="xad-ov">'
+        f'<thead><tr><th></th><th>Last</th><th>1D</th><th>YTD</th></tr></thead><tbody>{rows}</tbody></table></div></div>'
+    )
+
+
+# Home : l'écran qu'un desk regarde le matin. Tous les marchés sur une page, sans clic : niveaux, variations, écarts de taux, mouvements du jour, titres de presse.
+def render_overview_page():
+    st.session_state.pop("just_entered", None)
+    st.header("Market overview")
+
+    tickers = {ticker for _, assets in (*OVERVIEW_LEFT.values(), *OVERVIEW_RIGHT.values()) for ticker in assets.values()}
+    tickers |= {ticker for pair in OVERVIEW_SPREADS.values() for ticker in pair}
+    tickers |= {NAME_TO_TICKER[name] for name in ASSET_UNIVERSE["Equities"]}
+    with st.spinner("Downloading market data..."):
+        try:
+            # 400 jours : assez pour la variation sur un an et celle depuis le début de l'année
+            closes, fetched_at = download_close_prices(sorted(tickers), date.today() - timedelta(days=400), date.today())
+        except Exception as error:
+            st.error(f"The market data could not be downloaded: {error}")
+            return
+    if closes.empty:
+        st.warning("No quotations were returned. Please try again in a moment.")
+        return
+    st.session_state["last_updated"] = fetched_at
+    closes = closes.sort_index()
+
+    def series_of(ticker):
+        return closes[ticker] if ticker in closes else pd.Series(dtype=float)
+
+    # Bandeau : les quelques chiffres à voir en premier
+    highlights = []
+    for name, kind, ticker in OVERVIEW_HIGHLIGHTS:
+        figures = overview_figures(series_of(ticker), kind)
+        if figures is None:
+            continue
+        change = figures["changes"]["1D"]
+        cell = overview_change_cell(change, kind).replace("<td", "<div").replace("</td>", "</div>")
+        highlights.append(
+            f'<div class="xad-ov-highlight"><div class="xad-ov-name">{html.escape(name)}</div>'
+            f'<div class="xad-ov-value">{overview_level(name, figures["last"], kind)}</div>{cell}</div>'
+        )
+    st.markdown(f'<div class="xad-ov-strip">{"".join(highlights)}</div>', unsafe_allow_html=True)
+
+    # Écarts calculés seulement les jours où les deux taux sont connus, avec la dernière valeur connue si l'un des deux publie plus tard
+    spreads = {}
+    for name, (first, second) in OVERVIEW_SPREADS.items():
+        pair = pd.concat([series_of(first).rename("first"), series_of(second).rename("second")], axis=1).sort_index().ffill().dropna()
+        spreads[name] = pair["first"] - pair["second"]
+
+    def tables_of(groups):
+        return [overview_table(title, kind, {name: series_of(ticker) for name, ticker in assets.items()}) for title, (kind, assets) in groups.items()]
+
+    left = tables_of(OVERVIEW_LEFT)
+    right = tables_of(OVERVIEW_RIGHT)
+    right.insert(1, overview_table("Yield spreads (bp, indicative)", "spread", spreads))
+    st.markdown(
+        f'<div class="xad-ov-grid"><div class="xad-ov-column">{"".join(left)}</div><div class="xad-ov-column">{"".join(right)}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    # Actions du site : seulement celles cotées récemment, classées par variation du jour
+    movers = []
+    newest_day = closes.dropna(how="all").index[-1]
+    for name in ASSET_UNIVERSE["Equities"]:
+        figures = overview_figures(series_of(NAME_TO_TICKER[name]), "price")
+        if figures and figures["changes"]["1D"] is not None and (newest_day - figures["day"]).days <= 4:
+            movers.append((name, figures))
+    movers.sort(key=lambda item: item[1]["changes"]["1D"], reverse=True)
+    if movers:
+        gainers = [item for item in movers[:OVERVIEW_MOVERS] if item[1]["changes"]["1D"] > 0]
+        losers = [item for item in movers[::-1][:OVERVIEW_MOVERS] if item[1]["changes"]["1D"] < 0]
+        st.markdown(
+            f'<div class="xad-ov-grid xad-ov-gap"><div class="xad-ov-column">{overview_movers("Top gainers", gainers)}</div>'
+            f'<div class="xad-ov-column">{overview_movers("Top losers", losers)}</div></div>',
+            unsafe_allow_html=True,
+        )
+
+    # Titres de presse : sur 24 heures, ceux repris par le plus de sources d'abord
+    with st.spinner("Loading the latest headlines..."):
+        articles, _, _ = load_news()
+    since = datetime.now(ZoneInfo("Europe/Paris")) - timedelta(hours=24)
+    recent = [article for article in articles if article["date"] >= since and "transcript" not in article["title"].lower()]
+    top = sorted(recent, key=lambda article: (len(article["also"]), article["date"]), reverse=True)[:OVERVIEW_HEADLINES]
+    if top:
+        st.markdown(
+            f'<div class="xad-ov-block xad-ov-gap"><div class="xad-ov-title">Top headlines, last 24 hours</div>'
+            f'<div class="xad-news-list">{"".join(news_row_html(article) for article in top)}</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.page_link(news_page, label="All news", icon=":material/arrow_forward:")
+
+
 # Choix de la période, commun à toutes les pages : deux calendriers et une vérification. Renvoie None si les dates sont incohérentes.
 def choose_period(prefix):
     start_key, end_key = f"start_{prefix}", f"end_{prefix}"
@@ -2615,7 +2987,7 @@ def render_class_page(category):
     display_prices = close_prices * scale
 
     st.subheader("Yields" if is_rate else "Performance")
-    st.caption(f"{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y} · {len(close_prices)} daily observations")
+    st.caption(f"{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y} · {len(close_prices)} daily observations" + ("" if is_rate else " · Quoted prices, dividends not included"))
 
     # Cartes d'indicateurs, toujours sur les cours bruts (même si le graphique est en base 100). Les devises ont besoin de 4 décimales.
     render_metric_cards(close_prices, is_rate, 4 if category == "Currencies" else 2, assets)
@@ -2671,6 +3043,165 @@ def render_class_page(category):
 
 # Page Comparateur : réunit des actifs de toutes les classes sur une période commune.
 # Seuls les titres des classes d'actifs sont affichés : un clic sur la flèche déplie leurs instruments, pour que la page reste lisible quand la liste s'allonge.
+# COMPARATEUR — RISQUE
+
+# Rendements utilisés pour les corrélations et le bêta : hebdomadaires dès six mois d'historique,
+# car les places ne ferment pas à la même heure et des rendements quotidiens sous-estimeraient le lien entre l'Asie et les États-Unis.
+def comovement_returns(prices):
+    usable = prices.where(prices > 0)
+    if (usable.index[-1] - usable.index[0]).days >= 182:
+        return usable.resample("W-FRI").last().pct_change(fill_method=None).dropna(how="all"), "weekly"
+    return usable.pct_change(fill_method=None).dropna(how="all"), "daily"
+
+
+# Baisse depuis le plus haut atteint : 0 % au plus haut, -20 % quand le cours est 20 % sous son sommet
+def compute_drawdowns(prices):
+    usable = prices.where(prices > 0)
+    return usable / usable.cummax() - 1
+
+
+# Tableau de risque, une ligne par actif. Chaque actif est mesuré dans sa propre devise, sur ses vrais jours de cotation (les jours recopiés sont retirés).
+# risk_free et benchmark peuvent manquer : les colonnes concernées affichent alors "n/a".
+def compute_risk_table(prices, risk_free, benchmark):
+    rows = []
+    benchmark_returns = None
+    if benchmark is not None:
+        joined = pd.concat([prices, benchmark.rename("__benchmark__")], axis=1).sort_index().ffill().reindex(prices.index)
+        returns, _ = comovement_returns(joined)
+        benchmark_returns = returns["__benchmark__"]
+    else:
+        returns, _ = comovement_returns(prices)
+
+    for name in prices.columns:
+        values = prices[name].dropna()
+        values = values[values > 0]
+        traded = values[values.diff().fillna(1) != 0]
+        daily = traded.pct_change().dropna()
+        days = (values.index[-1] - values.index[0]).days if len(values) > 1 else 0
+        total = values.iloc[-1] / values.iloc[0] - 1 if len(values) > 1 else float("nan")
+        annual = (1 + total) ** (365.25 / days) - 1 if days >= MIN_DAYS_TO_ANNUALISE else float("nan")
+        volatility = daily.std() * math.sqrt(252) if len(daily) >= 20 else float("nan")
+        sharpe = float("nan")
+        if risk_free is not None and volatility and not pd.isna(volatility) and not pd.isna(annual):
+            sharpe = (annual - risk_free) / volatility
+        beta = float("nan")
+        if benchmark_returns is not None:
+            pair = pd.concat([returns[name], benchmark_returns], axis=1).dropna()
+            if len(pair) >= 10 and pair.iloc[:, 1].var() > 0:
+                beta = pair.iloc[:, 0].cov(pair.iloc[:, 1]) / pair.iloc[:, 1].var()
+        rows.append({
+            "Asset": name,
+            "Period return": total,
+            "Annualised return": annual,
+            "Volatility (ann.)": volatility,
+            "Sharpe": sharpe,
+            "Max drawdown": compute_drawdowns(values).min(),
+            "Worst day": daily.min() if len(daily) else float("nan"),
+            "VaR 95% (1 day)": daily.quantile(0.05) if len(daily) >= 20 else float("nan"),
+            "Beta": beta,
+        })
+    return pd.DataFrame(rows)
+
+
+# Courbes simples, une couleur par série, avec une bulle au survol. Le format long évite les problèmes de caractères dans les noms d'actifs.
+def plot_lines(frame, y_title, y_format, colors):
+    data = frame.copy()
+    data.index.name = "Date"
+    long_data = data.reset_index().melt(id_vars="Date", var_name="Series", value_name="Value").dropna()
+    names = list(frame.columns)
+    nearest = alt.selection_point(nearest=True, on="pointerover", fields=["Date"], empty=False)
+    base = alt.Chart(long_data).encode(
+        x=alt.X("Date:T", title=None, scale=alt.Scale(nice=False)),
+        y=alt.Y("Value:Q", title=y_title, axis=alt.Axis(format=y_format), scale=alt.Scale(zero=False)),
+        color=alt.Color("Series:N", title=None, sort=names, scale=alt.Scale(domain=names, range=colors), legend=alt.Legend(orient="bottom", labelLimit=0)),
+    )
+    lines = base.mark_line(strokeWidth=1.8)
+    points = base.mark_point(size=40, filled=True).encode(
+        opacity=alt.condition(nearest, alt.value(1), alt.value(0)),
+        tooltip=[alt.Tooltip("Date:T", format="%d/%m/%Y"), alt.Tooltip("Series:N", title="Series"), alt.Tooltip("Value:Q", format=y_format)],
+    ).add_params(nearest)
+    chart = (
+        alt.layer(lines, points).properties(height=320)
+        .configure(font=CHART_FONT)
+        .configure_axis(gridColor="#1E293B", domainColor="#334155", labelColor="#94A3B8", titleColor="#94A3B8")
+        .configure_legend(labelColor="#CBD5E1")
+        .configure_view(strokeWidth=0)
+    )
+    st.altair_chart(chart, width="stretch")
+
+
+# Matrice de corrélation : rouge pour une corrélation négative, vert pour une corrélation positive
+def plot_correlation(matrix):
+    data = matrix.copy()
+    data.index.name = "A"
+    names = list(matrix.columns)
+    long_data = data.reset_index().melt(id_vars="A", var_name="B", value_name="Correlation")
+    base = alt.Chart(long_data).encode(
+        x=alt.X("B:N", title=None, sort=names, axis=alt.Axis(labelAngle=0 if len(names) <= 5 else -40, labelLimit=160)),
+        y=alt.Y("A:N", title=None, sort=names, axis=alt.Axis(labelLimit=200)),
+    )
+    cells = base.mark_rect(cornerRadius=3).encode(
+        color=alt.Color("Correlation:Q", legend=None, scale=alt.Scale(domain=[-1, 0, 1], range=["#F87171", "#1E293B", "#4ADE80"])),
+        tooltip=[alt.Tooltip("A:N", title="Asset"), alt.Tooltip("B:N", title="With"), alt.Tooltip("Correlation:Q", format=".2f")],
+    )
+    labels = base.mark_text(color="#F1F5F9", fontSize=12).encode(text=alt.Text("Correlation:Q", format=".2f"))
+    chart = (
+        alt.layer(cells, labels).properties(height=max(180, 44 * len(names)))
+        .configure(font=CHART_FONT)
+        .configure_axis(domainColor="#334155", labelColor="#CBD5E1", tickColor="#334155")
+        .configure_view(strokeWidth=0)
+    )
+    st.altair_chart(chart, width="stretch")
+
+
+# Onglet Risk du comparateur : un tableau de mesures, les corrélations, les baisses depuis le sommet et la volatilité glissante
+def render_risk_tab(prices, universe, start_date, end_date):
+    # Streamlit oublie un menu quand on quitte la page : on garde l'indice choisi à part pour le restaurer
+    st.session_state.setdefault("risk_benchmark", st.session_state.get("risk_benchmark_saved", "S&P 500"))
+    benchmark_name = st.selectbox("Benchmark for beta", list(BENCHMARKS), key="risk_benchmark", width=260)
+    st.session_state["risk_benchmark_saved"] = benchmark_name
+
+    # Taux sans risque : moyenne du T-Bill américain à 3 mois sur la période. L'indice et ce taux manquent parfois : les colonnes passent alors à "n/a".
+    benchmark_ticker = BENCHMARKS[benchmark_name][0]
+    risk_free_ticker = NAME_TO_TICKER["US 3M T-Bill"]
+    try:
+        extra = fetch_prices([benchmark_ticker, risk_free_ticker], start_date, end_date)
+    except Exception:
+        extra = pd.DataFrame()
+    benchmark = extra[benchmark_ticker].dropna() if benchmark_ticker in extra else None
+    risk_free = extra[risk_free_ticker].mean() / 100 if risk_free_ticker in extra else None
+
+    table = compute_risk_table(prices, risk_free, benchmark)
+    st.subheader("Risk measures")
+    signed_columns = ["Period return", "Annualised return", "Max drawdown", "Worst day", "VaR 95% (1 day)"]
+    styled = table.style.format({column: "{:+.2%}" for column in signed_columns} | {"Volatility (ann.)": "{:.2%}", "Sharpe": "{:.2f}", "Beta": "{:.2f}"}, na_rep="n/a")
+    st.dataframe(styled, hide_index=True, width="stretch")
+    risk_free_text = f"{risk_free:.2%} (US 3M T-Bill average)" if risk_free is not None else "not available"
+    st.caption(
+        f"Quoted prices, dividends not included, each asset in its own currency. Sharpe risk-free rate: {risk_free_text}. "
+        f"VaR is the historical 5th percentile of daily returns. Annualised figures need at least {MIN_DAYS_TO_ANNUALISE} days. Beta against {benchmark_name}."
+    )
+
+    colors = [asset_color(name, universe) for name in prices.columns]
+
+    if len(prices.columns) >= 2:
+        returns, frequency = comovement_returns(prices)
+        st.subheader("Correlation")
+        plot_correlation(returns.corr(min_periods=10))
+        st.caption(f"Based on {frequency} returns.")
+    else:
+        st.info("Add a second instrument to see correlations.")
+
+    st.subheader("Drawdown from peak")
+    plot_lines(compute_drawdowns(prices), "Drawdown", ".1%", colors)
+
+    # Volatilité glissante : seulement si la période est assez longue pour avoir un sens
+    if len(prices) > 60:
+        st.subheader("Rolling volatility (60 days)")
+        usable = prices.where(prices > 0)
+        plot_lines((usable.pct_change(fill_method=None).rolling(60).std() * math.sqrt(252)).dropna(how="all"), "Volatility (ann.)", ".0%", colors)
+
+
 def render_comparator_page():
     title_col, clear_col = st.columns([9, 1], vertical_alignment="bottom")
     title_col.header("Comparator")
@@ -2701,23 +3232,31 @@ def render_comparator_page():
     universe = [name for category in categories for name in ASSET_UNIVERSE[category]]
     selected_names = [name for name in universe if name in comparator]
 
-    st.subheader("Performance (base 100)")
     prices = load_prices(selected_names, start_date, end_date)
-    if prices is not None:
+    if prices is None:
+        return
+    performance_tab, risk_tab = st.tabs(["Performance", "Risk"])
+    with performance_tab:
+        st.subheader("Performance (base 100)")
+        st.caption("Quoted prices, dividends not included, each asset in its own currency.")
         plot_chart({"Close": prices * (100 / prices.bfill().iloc[0])}, "Normalised value (base 100)", universe=universe)
+    with risk_tab:
+        render_risk_tab(prices, universe, start_date, end_date)
 
 
 # PORTEFEUILLE — CALCULS
 
-# Cours de clôture bruts. Contrairement aux autres pages, ils ne sont pas ajustés des dividendes :
-# ajuster ferait baisser le cours du jour d'achat et ne correspondrait plus au prix réellement payé.
+# Dividendes par action versés sur la période, par date de détachement. Renvoie None si les données ne sont pas disponibles.
 @st.cache_data(ttl=3600, show_spinner=False)
-def download_raw_closes(tickers, start, end):
-    data = yf.download(tickers, start=start, end=end + timedelta(days=1), interval="1d", auto_adjust=False, progress=False)
-    if data.empty:
-        return pd.DataFrame()
-    close = data["Close"]
-    return close.to_frame(name=tickers[0]) if isinstance(close, pd.Series) else close
+def download_dividends(tickers, start, end):
+    try:
+        data = yf.download(tickers, start=start, end=end + timedelta(days=1), interval="1d", auto_adjust=False, actions=True, progress=False)
+    except Exception:
+        return None
+    if data.empty or "Dividends" not in data:
+        return None
+    dividends = data["Dividends"]
+    return dividends.to_frame(name=tickers[0]) if isinstance(dividends, pd.Series) else dividends
 
 
 # Devise de cotation d'un titre : renvoie le code affiché, la vraie devise et le facteur d'unité (les pence valent 0,01 GBP)
@@ -2735,8 +3274,9 @@ def fx_ticker(currency, base):
 
 # Calcule chaque ligne du portefeuille et son évolution. Tout est converti dans la devise de référence :
 # le montant investi au taux de change du jour d'achat, la valeur au taux du jour. Les gains incluent donc l'effet de change.
-# Les dividendes reçus ne sont pas comptés.
-def compute_portfolio(positions, base, closes):
+# Le gain se décompose en effet de cours (au taux de change d'achat) et effet de change. Les dividendes sont comptés à part, avant impôts.
+# Un dividende revient à la ligne si le titre est acheté avant la date de détachement.
+def compute_portfolio(positions, base, closes, dividends):
     closes = closes.sort_index().ffill()
     rows, skipped = [], []
     value_history = pd.Series(0.0, index=closes.index)
@@ -2764,9 +3304,20 @@ def compute_portfolio(positions, base, closes):
 
         # Prix payé : celui saisi, sinon la dernière clôture connue à la date d'achat
         buy_price = position["price"] or float(prices_until_buy.iloc[-1])
-        invested = position["quantity"] * buy_price * unit * float(rates.loc[:buy_day].iloc[-1] if not rates.loc[:buy_day].empty else rates.iloc[0])
+        buy_rate = float(rates.loc[:buy_day].iloc[-1] if not rates.loc[:buy_day].empty else rates.iloc[0])
+        last_rate = float(rates.iloc[-1])
+        invested = position["quantity"] * buy_price * unit * buy_rate
         last_price = float(prices.iloc[-1])
-        value = position["quantity"] * last_price * unit * float(rates.iloc[-1])
+        value = position["quantity"] * last_price * unit * last_rate
+
+        # Dividendes convertis au taux de change du jour de détachement
+        received = 0.0
+        if dividends is not None and ticker in dividends:
+            paid = dividends[ticker].dropna()
+            paid = paid[(paid > 0) & (paid.index > buy_day)]
+            if not paid.empty:
+                paid_rates = rates.reindex(rates.index.union(paid.index)).ffill().bfill().reindex(paid.index)
+                received = float((paid * paid_rates).sum()) * position["quantity"] * unit
 
         rows.append({
             "index": position_index,
@@ -2774,12 +3325,16 @@ def compute_portfolio(positions, base, closes):
             "Bought on": position["date"],
             "Quantity": position["quantity"],
             "Currency": label,
+            "Exposure": currency,
             "Buy price": buy_price,
             "Last price": last_price,
             "Invested": invested,
             "Value": value,
             "P&L": value - invested,
             "P&L %": (value - invested) / invested if invested else 0.0,
+            "Price effect": position["quantity"] * (last_price - buy_price) * unit * buy_rate,
+            "FX effect": position["quantity"] * last_price * unit * (last_rate - buy_rate),
+            "Dividends": received,
         })
 
         # Évolution : la ligne ne compte qu'à partir de sa date d'achat
@@ -2790,6 +3345,47 @@ def compute_portfolio(positions, base, closes):
 
     history = pd.DataFrame({"Value": value_history, "Invested": invested_history})
     return rows, history[history["Invested"] > 0], skipped
+
+
+# Performance pondérée par le temps, base 100 : les achats ne comptent pas comme des gains. Chaque jour, on compare la valeur à celle de la veille, augmentée des achats du jour.
+# C'est la mesure qu'on peut comparer à un indice, quelles que soient les dates d'achat.
+def time_weighted_index(history):
+    purchases = history["Invested"].diff().fillna(history["Invested"])
+    capital = history["Value"].shift(1).fillna(0.0) + purchases
+    daily = (history["Value"] / capital.where(capital > 0)).fillna(1.0) - 1
+    return (1 + daily).cumprod() * 100, daily
+
+
+# Indice de référence converti dans la devise du portefeuille, sur les mêmes dates, base 100
+def benchmark_index(closes, benchmark_name, base, dates):
+    ticker, currency = BENCHMARKS[benchmark_name]
+    if ticker not in closes or closes[ticker].notna().sum() < 2:
+        return None
+    filled = closes.sort_index().ffill()
+    values = filled[ticker]
+    rate_ticker = fx_ticker(currency, base)
+    if rate_ticker is not None:
+        if rate_ticker not in filled or filled[rate_ticker].notna().sum() == 0:
+            return None
+        values = values * filled[rate_ticker].bfill()
+    values = values.reindex(dates).ffill().dropna()
+    return values / values.iloc[0] * 100 if len(values) >= 2 else None
+
+
+# Répartition en barres horizontales, de la plus forte à la plus faible
+def plot_weights(weights):
+    data = weights.sort_values(ascending=False).rename("Weight").rename_axis("Item").reset_index()
+    chart = (
+        alt.Chart(data).mark_bar(color="#D9B872", cornerRadiusEnd=3).encode(
+            x=alt.X("Weight:Q", title=None, axis=alt.Axis(format=".0%")),
+            y=alt.Y("Item:N", title=None, sort=list(data["Item"]), axis=alt.Axis(labelLimit=0)),
+            tooltip=[alt.Tooltip("Item:N", title="Item"), alt.Tooltip("Weight:Q", format=".1%")],
+        ).properties(height=max(100, 30 * len(data)))
+        .configure(font=CHART_FONT)
+        .configure_axis(gridColor="#1E293B", domainColor="#334155", labelColor="#94A3B8", titleColor="#94A3B8")
+        .configure_view(strokeWidth=0)
+    )
+    st.altair_chart(chart, width="stretch")
 
 
 # PORTEFEUILLE — AFFICHAGE
@@ -2917,25 +3513,36 @@ def render_portfolio_page():
             st.info("Search for a company above to add your first position.")
         return
 
-    # Téléchargement des cours et des taux de change nécessaires, depuis la plus ancienne date d'achat
-    tickers = {NAME_TO_TICKER[position["name"]] for position in positions}
-    for ticker in list(tickers):
+    # Indice de comparaison, gardé à part car Streamlit oublie un menu quand on quitte la page
+    st.session_state.setdefault("portfolio_benchmark", st.session_state.get("portfolio_benchmark_saved", "S&P 500"))
+    benchmark_name = st.session_state["portfolio_benchmark"]
+
+    # Téléchargement des cours et des taux de change nécessaires, depuis la plus ancienne date d'achat. Ce sont les mêmes cours que sur les autres pages.
+    position_tickers = sorted({NAME_TO_TICKER[position["name"]] for position in positions})
+    tickers = set(position_tickers)
+    for ticker in position_tickers:
         rate_ticker = fx_ticker(quote_currency(ticker)[1], base)
         if rate_ticker:
             tickers.add(rate_ticker)
+    benchmark_ticker, benchmark_currency = BENCHMARKS[benchmark_name]
+    tickers.add(benchmark_ticker)
+    benchmark_rate = fx_ticker(benchmark_currency, base)
+    if benchmark_rate:
+        tickers.add(benchmark_rate)
     start = min(position["date"] for position in positions) - timedelta(days=10)
     with st.spinner("Downloading market data..."):
         try:
-            closes = download_raw_closes(sorted(tickers), start, date.today())
+            closes, fetched_at = download_close_prices(sorted(tickers), start, date.today())
         except Exception as error:
             st.error(f"The market data could not be downloaded: {error}")
             return
-    st.session_state["last_updated"] = datetime.now()
+        dividends = download_dividends(position_tickers, start, date.today())
+    st.session_state["last_updated"] = fetched_at
     if closes.empty:
         st.warning("No quotations were returned for these positions.")
         return
 
-    rows, history, skipped = compute_portfolio(positions, base, closes)
+    rows, history, skipped = compute_portfolio(positions, base, closes, dividends)
     if skipped:
         st.warning(f"No price available at the purchase date for: {', '.join(skipped)}. Excluded from the totals.")
     if not rows:
@@ -2945,38 +3552,92 @@ def render_portfolio_page():
     table = pd.DataFrame(rows)
     invested, value = table["Invested"].sum(), table["Value"].sum()
     pnl = value - invested
-    tone = "xad-up" if pnl > 0 else "xad-down" if pnl < 0 else "xad-flat"
+    table["Weight"] = table["Value"] / value if value else 0.0
+    price_effect, fx_effect, received = table["Price effect"].sum(), table["FX effect"].sum(), table["Dividends"].sum()
     by_asset = table.groupby("Asset")["P&L"].sum()
+
+    def tone_of(amount):
+        return "xad-up" if amount > 0 else "xad-down" if amount < 0 else "xad-flat"
+
+    dividends_text = f"{received:+,.2f} {base}" if dividends is not None else "n/a"
     cards = [
         ("Portfolio value", f"{value:,.2f} {base}", "", ""),
         ("Invested", f"{invested:,.2f} {base}", "", ""),
-        ("Total P&L", f"{pnl:+,.2f} {base}", tone, f"{pnl / invested:+.2%}" if invested else ""),
-        ("Best position", html.escape(by_asset.idxmax()), "xad-up" if by_asset.max() > 0 else "xad-down", f"{by_asset.max():+,.2f} {base}"),
-        ("Worst position", html.escape(by_asset.idxmin()), "xad-up" if by_asset.min() > 0 else "xad-down", f"{by_asset.min():+,.2f} {base}"),
+        ("Total P&L", f"{pnl:+,.2f} {base}", tone_of(pnl), f"{pnl / invested:+.2%}" if invested else ""),
+        ("Price effect", f"{price_effect:+,.2f} {base}", tone_of(price_effect), f"{price_effect / invested:+.2%}" if invested else ""),
+        ("FX effect", f"{fx_effect:+,.2f} {base}", tone_of(fx_effect), f"{fx_effect / invested:+.2%}" if invested else ""),
+        ("Dividends received", dividends_text, tone_of(received), f"{received / invested:+.2%} of invested" if invested and dividends is not None else ""),
+        ("P&L with dividends", f"{pnl + received:+,.2f} {base}", tone_of(pnl + received), f"{(pnl + received) / invested:+.2%}" if invested else ""),
+        ("Best position", html.escape(by_asset.idxmax()), "", f"{by_asset.max():+,.2f} {base}"),
+        ("Worst position", html.escape(by_asset.idxmin()), "", f"{by_asset.min():+,.2f} {base}"),
     ]
     items = "".join(
         f'<div class="xad-card"><div class="xad-card-name">{title}</div>'
-        f'<div class="xad-card-last {card_tone if title == "Total P&L" else ""}">{main}</div>'
+        f'<div class="xad-card-last {card_tone}">{main}</div>'
         f'<div class="xad-card-row"><span class="{card_tone}">{detail}</span></div></div>'
         for title, main, card_tone, detail in cards
     )
     st.markdown(f'<div class="xad-cards">{items}</div>', unsafe_allow_html=True)
 
+    # Performance comparée à un indice : au moins deux jours d'historique sont nécessaires
     if len(history) >= 2:
+        st.subheader("Performance against benchmark")
+        benchmark_name = st.selectbox("Benchmark", list(BENCHMARKS), key="portfolio_benchmark", width=260)
+        st.session_state["portfolio_benchmark_saved"] = benchmark_name
+        portfolio_curve, daily = time_weighted_index(history)
+        benchmark_curve = benchmark_index(closes, benchmark_name, base, history.index)
+        portfolio_return = portfolio_curve.iloc[-1] / 100 - 1
+        drawdown = (portfolio_curve / portfolio_curve.cummax() - 1).min()
+        figures = [("Portfolio (time-weighted)", f"{portfolio_return:+.2%}", tone_of(portfolio_return))]
+        if benchmark_curve is not None:
+            benchmark_return = benchmark_curve.iloc[-1] / 100 - 1
+            figures += [
+                (benchmark_name, f"{benchmark_return:+.2%}", tone_of(benchmark_return)),
+                ("Excess return", f"{portfolio_return - benchmark_return:+.2%}", tone_of(portfolio_return - benchmark_return)),
+            ]
+        if len(daily) >= 20:
+            figures.append(("Volatility (ann.)", f"{daily.iloc[1:].std() * math.sqrt(252):.1%}", ""))
+        figures.append(("Max drawdown", f"{drawdown:.2%}", tone_of(drawdown)))
+        items = "".join(
+            f'<div class="xad-card"><div class="xad-card-name">{html.escape(title)}</div><div class="xad-card-last {card_tone}">{main}</div></div>'
+            for title, main, card_tone in figures
+        )
+        st.markdown(f'<div class="xad-cards">{items}</div>', unsafe_allow_html=True)
+        curves = pd.DataFrame({"Portfolio": portfolio_curve})
+        colors = ["#D9B872"]
+        if benchmark_curve is not None:
+            curves[benchmark_name] = benchmark_curve
+            colors.append("#64748B")
+        else:
+            st.warning(f"{benchmark_name} could not be loaded for this period.")
+        plot_lines(curves, f"Base 100, in {base}", ".1f", colors)
+        st.caption(f"Time-weighted, so purchase dates do not distort the result. Both curves are in {base} and exclude dividends.")
+
         st.subheader("Portfolio value")
         plot_portfolio_history(history, base)
 
+    st.subheader("Allocation")
+    asset_col, currency_col = st.columns(2)
+    with asset_col:
+        st.markdown('<div class="xad-label">By position</div>', unsafe_allow_html=True)
+        plot_weights(table.groupby("Asset")["Weight"].sum())
+    with currency_col:
+        st.markdown('<div class="xad-label">By currency</div>', unsafe_allow_html=True)
+        plot_weights(table.groupby("Exposure")["Weight"].sum())
+
     st.subheader("Positions")
-    display = table.drop(columns="index")
-    styled = display.style.format({
+    columns = ["Asset", "Bought on", "Quantity", "Currency", "Buy price", "Last price", "Invested", "Value", "Weight", "P&L", "P&L %", "Price effect", "FX effect", "Dividends"]
+    money_changes = ["P&L", "Price effect", "FX effect"]
+    styled = table[columns].style.format({
         "Bought on": lambda day: f"{day:%d/%m/%Y}", "Quantity": "{:,.4g}", "Buy price": "{:,.2f}", "Last price": "{:,.2f}",
-        "Invested": "{:,.2f}", "Value": "{:,.2f}", "P&L": "{:+,.2f}", "P&L %": "{:+.2%}",
-    }).map(pnl_color, subset=["P&L", "P&L %"])
+        "Invested": "{:,.2f}", "Value": "{:,.2f}", "Weight": "{:.1%}", "P&L": "{:+,.2f}", "P&L %": "{:+.2%}",
+        "Price effect": "{:+,.2f}", "FX effect": "{:+,.2f}", "Dividends": "{:,.2f}",
+    }).map(pnl_color, subset=[*money_changes, "P&L %"])
     st.dataframe(styled, hide_index=True, width="stretch", key="portfolio_table", on_select="rerun", selection_mode="multi-row")
     buttons = st.container(horizontal=True)
     buttons.button("Remove selected", on_click=remove_positions, args=(rows,))
     buttons.button("Clear all", on_click=clear_portfolio)
-    st.caption(f"Amounts in {base}, converted at each day's exchange rate. Prices exclude dividends. Your portfolio is kept until you close or reload the page.")
+    st.caption(f"Amounts in {base}, converted at each day's exchange rate. Quoted prices, with dividends shown separately before tax. Your portfolio is kept until you close or reload the page.")
 
     st.subheader("P&L by asset")
     plot_pnl_by_asset(table, base)
@@ -3203,8 +3864,9 @@ CLASS_PAGES = {
     )
     for category in ASSET_UNIVERSE
 }
-# L'accueil n'est pas dans le menu : on y revient en cliquant sur le nom du site
-home_page = st.Page(render_home_page, title="Home", default=True, visibility="hidden")
+# La Home du menu est l'écran du matin. La page de présentation n'est pas dans le menu : on y va en cliquant sur le nom du site.
+overview_page = st.Page(render_overview_page, title="Home", default=True)
+home_page = st.Page(render_home_page, title="DESKatH", url_path="desk", visibility="hidden")
 comparator_page = st.Page(render_comparator_page, title="Comparator", url_path="comparator")
 portfolio_page = st.Page(render_portfolio_page, title="Portfolio", url_path="portfolio")
 news_page = st.Page(render_news_page, title="News", url_path="news")
@@ -3212,9 +3874,9 @@ news_page = st.Page(render_news_page, title="News", url_path="news")
 # À l'ouverture du site, on reste sur la page d'entrée tant que le visiteur n'a pas défilé jusqu'au bout. Elle n'est pas dans le menu : on n'y revient pas.
 entered = st.session_state.get("entered", False)
 # Les classes d'actifs sont regroupées dans le menu déroulant "Assets" ; le CSS place ce menu juste après News.
-navigation_menu = {"": [home_page, news_page, comparator_page, portfolio_page], "Assets": list(CLASS_PAGES.values())}
+navigation_menu = {"": [overview_page, home_page, news_page, comparator_page, portfolio_page], "Assets": list(CLASS_PAGES.values())}
 current_page = st.navigation(navigation_menu, position="top" if entered else "hidden")
-is_home = current_page.url_path == ""
+is_home = current_page.url_path == "desk"
 
 # Animations communes à tout le site : chargées dès l'ouverture, car la visite guidée s'affiche sur la page d'entrée
 with st.container(key="xad_motion"):
@@ -3230,7 +3892,7 @@ if not entered:
     render_landing()
     st.stop()
 
-# Nom du site, toujours visible à gauche de la barre du haut. C'est un lien interne vers l'accueil : la session (portefeuille, sélections) est conservée.
+# Nom du site, toujours visible à gauche de la barre du haut. C'est un lien interne vers la page de présentation : la session (portefeuille, sélections) est conservée.
 with st.container(key="xad_brand"):
     st.page_link(home_page, label="DESK*at*H")
 
