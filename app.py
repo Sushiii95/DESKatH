@@ -12,6 +12,7 @@ import html
 import math
 import urllib.request
 import re
+import unicodedata
 import xml.etree.ElementTree as ElementTree
 from concurrent.futures import ThreadPoolExecutor
 from email.utils import parsedate_to_datetime
@@ -318,6 +319,13 @@ NEWS_FEEDS = [
 ]
 NEWS_SECTIONS = ["All", "Indices", "Equities", "Currencies", "Rates", "Commodities", "Bonds", "Economy", "Markets"]
 NEWS_MAX_ARTICLES = 150
+# Recherche : les sources sont en français et en anglais, ces noms désignent donc la même institution
+NEWS_SEARCH_ALIASES = [
+    ["bce", "ecb", "banque centrale europeenne", "european central bank"],
+    ["fed", "federal reserve", "reserve federale"],
+    ["boe", "bank of england", "banque d'angleterre"],
+    ["boj", "bank of japan", "banque du japon"],
+]
 NEWS_MAX_PER_FEED = 40
 NEWS_MAX_AGE_DAYS = 7
 NEWS_SAME_STORY_SIMILARITY = 0.6
@@ -877,11 +885,11 @@ button[data-testid^="stBaseButton-tertiary"] p {
 }
 
 /* Champs de date : le contour s'illumine au survol */
-[data-testid="stDateInputField"] {
+[data-testid="stDateInputField"], [data-testid="stTextInputRootElement"] {
     transition: border-color 160ms ease;
 }
 @media (hover: hover) and (pointer: fine) {
-    [data-testid="stDateInputField"]:hover {
+    [data-testid="stDateInputField"]:hover, [data-testid="stTextInputRootElement"]:hover {
         border-color: rgba(217, 184, 114, 0.5);
     }
 }
@@ -2982,7 +2990,32 @@ def news_row_html(article):
 
 # NEWS — PAGE
 
-# Page News : un filtre par section et par source, puis les articles regroupés par jour, du plus récent au plus ancien.
+# Met un texte en minuscules, sans accents : "Énergie" et "energie" se retrouvent ainsi.
+def normalize_search_text(text):
+    decomposed = unicodedata.normalize("NFKD", text.replace("’", "'"))
+    return "".join(character for character in decomposed if not unicodedata.combining(character)).lower()
+
+
+# Cherche un mot entier, au singulier ou au pluriel : "gold" ne ressort pas "Goldman", "BCE" ne ressort pas un mot qui la contient.
+def search_word_pattern(words):
+    return rf"(?<![a-z0-9]){re.escape(words)}s?(?![a-z0-9])"
+
+
+# Transforme la recherche en conditions : le titre doit contenir chaque mot tapé, ou l'un des autres noms de l'institution cherchée.
+def news_search_conditions(query):
+    remaining = normalize_search_text(query)
+    conditions = []
+    for names in NEWS_SEARCH_ALIASES:
+        typed = [name for name in names if re.search(search_word_pattern(name), remaining)]
+        if typed:
+            conditions.append("|".join(search_word_pattern(name) for name in names))
+            for name in typed:
+                remaining = re.sub(search_word_pattern(name), " ", remaining)
+    conditions += [search_word_pattern(word) for word in remaining.split()]
+    return conditions
+
+
+# Page News : une recherche, un filtre par section et par source, puis les articles regroupés par jour, du plus récent au plus ancien.
 def render_news_page():
     st.header("News")
     with st.spinner("Loading the latest headlines..."):
@@ -2996,7 +3029,18 @@ def render_news_page():
         return
 
     # Streamlit oublie les boutons d'une page quittée : on garde les filtres à part pour les restaurer
-    memory = st.session_state.setdefault("news_memory", {"section": "All", "sources": []})
+    memory = st.session_state.setdefault("news_memory", {"query": "", "section": "All", "sources": []})
+    st.session_state.setdefault("news_query", memory["query"])
+    query = st.text_input(
+        "Search the news",
+        key="news_query",
+        placeholder="Search the news, e.g. ECB, Nvidia, oil...",
+        icon=":material/search:",
+        label_visibility="collapsed",
+    )
+    memory["query"] = query
+    conditions = news_search_conditions(query)
+
     st.session_state.setdefault("news_section", memory["section"])
     section = st.pills("Section", NEWS_SECTIONS, key="news_section") or "All"
     memory["section"] = section
@@ -3008,14 +3052,18 @@ def render_news_page():
         chosen_sources = st.pills("Source", sources, selection_mode="multi", key="news_sources", label_visibility="collapsed") or []
     memory["sources"] = chosen_sources
 
-    shown = [
+    matching = [
         article for article in articles
         if (section == "All" or article["section"] == section)
         and (not chosen_sources or article["source"] in chosen_sources or set(chosen_sources) & set(article["also"]))
-    ][:NEWS_MAX_ARTICLES]
+        and all(re.search(condition, normalize_search_text(article["title"])) for condition in conditions)
+    ]
+    shown = matching[:NEWS_MAX_ARTICLES]
     if not shown:
         st.info("No headlines match these filters right now.")
         return
+    if conditions:
+        st.caption(f"{len(matching)} headline{'' if len(matching) == 1 else 's'} found")
 
     # Regroupement par jour : "Today", "Yesterday", puis la date
     today = datetime.now(ZoneInfo("Europe/Paris")).date()
