@@ -256,24 +256,21 @@ HOME_TILES = {
 
 # Market Overview (écran du matin) : les tableaux et leurs instruments. Chaque type de ligne a son unité : % pour les prix, points de base pour les taux, points pour la volatilité.
 OVERVIEW_LEFT = {
-    "Equity indices": ("price", {"S&P 500": "^GSPC", "Nasdaq 100": "^NDX", "Euro Stoxx 50": "^STOXX50E", "CAC 40": "^FCHI", "DAX": "^GDAXIP", "FTSE 100": "^FTSE", "Nikkei 225": "^N225"}),
+    "Equity indices": ("price", {"S&P 500": "^GSPC", "Nasdaq 100": "^NDX", "CAC 40": "^FCHI"}),
     "Volatility (changes in points)": ("level", {"VIX": "^VIX", "MOVE": "^MOVE"}),
-    "Currencies": ("price", {"Dollar index": "DX-Y.NYB", "EUR/USD": "EURUSD=X", "GBP/USD": "GBPUSD=X", "USD/JPY": "USDJPY=X", "EUR/GBP": "EURGBP=X", "USD/CHF": "USDCHF=X"}),
+    "Currencies": ("price", {"EUR/USD": "EURUSD=X", "GBP/USD": "GBPUSD=X", "USD/JPY": "USDJPY=X", "EUR/GBP": "EURGBP=X", "USD/CHF": "USDCHF=X"}),
 }
 OVERVIEW_RIGHT = {
-    "Government yields (changes in bp)": ("yield", {"US 2Y": "UST2Y", "US 10Y": "^TNX", "US 30Y": "^TYX", "Bund 2Y": "BUND2Y", "Bund 10Y": "BUND10Y", "OAT 10Y": "MFR10.AS"}),
-    "Commodities": ("price", {"Brent": "BZ=F", "WTI": "CL=F", "Gold": "GC=F", "Silver": "SI=F", "Copper": "HG=F", "Natural gas": "NG=F"}),
-    "Bond ETFs": ("price", {"US Treasuries 7-10Y (IEF)": "IEF", "US Investment Grade (LQD)": "LQD", "US High Yield (HYG)": "HYG"}),
+    "Government yields (changes in bp)": ("yield", {"US 10Y": "^TNX", "Bund 10Y": "BUND10Y", "OAT 10Y": "MFR10.AS"}),
+    "Commodities": ("price", {"Brent": "BZ=F", "WTI": "CL=F", "Gold": "GC=F", "Silver": "SI=F", "Natural gas": "NG=F"}),
 }
-# Écarts de taux en points de base : (taux long ou pays, taux court ou référence)
+# Pentes de taux en points de base : (taux à 10 ans, taux à 2 ans). L'OAT 2 ans est la ligne cotée de novembre 2028 : Euronext ne publie pas d'indice à 2 ans.
 OVERVIEW_SPREADS = {
     "US 2s10s": ("^TNX", "UST2Y"),
-    "Bund 2s10s": ("BUND10Y", "BUND2Y"),
-    "OAT - Bund 10Y": ("MFR10.AS", "BUND10Y"),
-    "US - Bund 10Y": ("^TNX", "BUND10Y"),
+    "OAT 2s10s": ("MFR10.AS", "ETANM.PA"),
 }
 # Bandeau du haut de Market Overview : l'essentiel d'un coup d'œil
-OVERVIEW_HIGHLIGHTS = [("S&P 500", "price", "^GSPC"), ("Euro Stoxx 50", "price", "^STOXX50E"), ("US 10Y", "yield", "^TNX"), ("OAT 10Y", "yield", "MFR10.AS"), ("EUR/USD", "price", "EURUSD=X"), ("Brent", "price", "BZ=F"), ("VIX", "level", "^VIX")]
+OVERVIEW_HIGHLIGHTS = [("S&P 500", "price", "^GSPC"), ("CAC 40", "price", "^FCHI"), ("US 10Y", "yield", "^TNX"), ("OAT 10Y", "yield", "MFR10.AS"), ("EUR/USD", "price", "EURUSD=X"), ("Brent", "price", "BZ=F"), ("VIX", "level", "^VIX")]
 OVERVIEW_MOVERS = 5
 OVERVIEW_HEADLINES = 6
 
@@ -1340,13 +1337,30 @@ button:focus-visible, a:focus-visible {
 }
 table.xad-ov {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     border: none;
     font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
 }
+/* Largeurs fixes : les colonnes tombent au même endroit dans tous les tableaux. La première prend la place restante. */
+table.xad-ov th:not(:first-child) {
+    width: 5.5rem;
+}
+table.xad-ov-wide {
+    min-width: 33rem;
+}
+table.xad-ov-wide th:not(:first-child) {
+    width: 4rem;
+}
+table.xad-ov-wide th:nth-child(2) {
+    width: 4.5rem;
+}
+table.xad-ov-wide th:last-child {
+    width: 3rem;
+}
 table.xad-ov th {
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.375rem;
     border: none;
     border-bottom: 1px solid rgba(148, 163, 184, 0.22);
     background: transparent;
@@ -1357,7 +1371,7 @@ table.xad-ov th {
     white-space: nowrap;
 }
 table.xad-ov td {
-    padding: 0.3125rem 0.5rem;
+    padding: 0.3125rem 0.375rem;
     border: none;
     border-bottom: 1px solid rgba(148, 163, 184, 0.08);
     text-align: right;
@@ -1383,7 +1397,7 @@ table.xad-ov .xad-up, table.xad-ov .xad-down, table.xad-ov .xad-flat {
         background: rgba(217, 184, 114, 0.06);
     }
 }
-@media (max-width: 960px) {
+@media (max-width: 1240px) {
     .xad-ov-grid {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -2796,7 +2810,7 @@ def overview_table(title, kind, series_by_name):
             f'<td class="xad-ov-none">{figures["day"]:%d/%m}</td></tr>'
         )
     return (
-        f'<div class="xad-ov-block"><div class="xad-ov-title">{html.escape(title)}</div><div class="xad-ov-scroll"><table class="xad-ov">'
+        f'<div class="xad-ov-block"><div class="xad-ov-title">{html.escape(title)}</div><div class="xad-ov-scroll"><table class="xad-ov xad-ov-wide">'
         f'<thead><tr><th></th><th>Last</th>{head}<th>As of</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div></div>'
     )
 
@@ -2816,7 +2830,6 @@ def overview_movers(title, movers):
 
 # Market Overview : l'écran qu'un desk regarde le matin. Tous les marchés sur une page, sans clic : niveaux, variations, écarts de taux, mouvements du jour, titres de presse.
 def render_overview_page():
-    st.session_state.pop("just_entered", None)
     st.header("Market Overview")
 
     tickers = {ticker for _, assets in (*OVERVIEW_LEFT.values(), *OVERVIEW_RIGHT.values()) for ticker in assets.values()}
@@ -2863,7 +2876,7 @@ def render_overview_page():
 
     left = tables_of(OVERVIEW_LEFT)
     right = tables_of(OVERVIEW_RIGHT)
-    right.insert(1, overview_table("Yield spreads (bp, indicative)", "spread", spreads))
+    right.insert(1, overview_table("Yield curve slopes (bp, indicative)", "spread", spreads))
     st.markdown(
         f'<div class="xad-ov-grid"><div class="xad-ov-column">{"".join(left)}</div><div class="xad-ov-column">{"".join(right)}</div></div>',
         unsafe_allow_html=True,
@@ -3877,6 +3890,10 @@ entered = st.session_state.get("entered", False)
 navigation_menu = {"": [home_page, overview_page, news_page, comparator_page, portfolio_page], "Assets": list(CLASS_PAGES.values())}
 current_page = st.navigation(navigation_menu, position="top" if entered else "hidden")
 is_home = current_page.url_path == ""
+
+# Juste après le défilement de la page d'entrée, on va toujours à l'accueil, même si l'adresse rafraîchie était celle d'une autre page
+if st.session_state.get("just_entered") and not is_home:
+    st.switch_page(home_page)
 
 # Animations communes à tout le site : chargées dès l'ouverture, car la visite guidée s'affiche sur la page d'entrée
 with st.container(key="xad_motion"):
