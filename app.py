@@ -496,17 +496,107 @@ span[data-testid="stIconMaterial"] {
 [data-testid="stTopNav"] {
     margin-left: 9.5rem;
     margin-right: var(--space-8);
-    justify-content: space-evenly;
+    justify-content: center;
+    gap: var(--space-8);
 }
-[data-testid="stTopNavLink"] {
+/* Ordre affiché : News, Assets, Comparator, Portfolio */
+[data-testid="stTopNav"] > .rc-overflow-item:has([data-testid="stTopNavSection"]) { order: 1 !important; }
+[data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/comparator"]) { order: 2 !important; }
+[data-testid="stTopNav"] > .rc-overflow-item:has(a[href$="/portfolio"]) { order: 3 !important; }
+[data-testid="stTopNavLink"], [data-testid="stTopNavSection"] {
     height: 2.5rem;
     padding: 0 0.875rem;
 }
-[data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]) {
+[data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]),
+[data-testid="stTopNavSection"] p {
     font-size: 0.8125rem;
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+}
+/* Bouton Assets : une petite flèche qui pivote à l'ouverture du menu */
+[data-testid="stTopNavSection"] {
+    background-color: transparent !important;
+}
+[data-testid="stTopNavSection"] > div[aria-hidden] {
+    display: flex;
+    align-items: center;
+    margin-left: var(--space-8);
+}
+[data-testid="stTopNavSection"] > div[aria-hidden] svg {
+    display: none;
+}
+[data-testid="stTopNavSection"] > div[aria-hidden]::after {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-1px) rotate(45deg);
+    transition: transform 240ms var(--ease-out);
+}
+[data-testid="stTopNavSection"][aria-expanded="true"] > div[aria-hidden]::after {
+    transform: translateY(2px) rotate(225deg);
+}
+/* Menu Assets : Streamlit place la boîte extérieure, on anime donc la boîte intérieure */
+[data-testid="stTopNavPopoverBody"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+[data-testid="stTopNavPopover"] {
+    min-width: 12rem;
+    padding: 0.375rem;
+    border: 1px solid rgba(217, 184, 114, 0.22);
+    border-radius: 12px;
+    background: rgba(8, 11, 26, 0.96);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    transform-origin: top left;
+    animation: xad-menu-in 220ms var(--ease-out) backwards;
+}
+[data-testid="stTopNavPopover"] > div {
+    animation: xad-menu-item 260ms var(--ease-out) backwards;
+}
+[data-testid="stTopNavPopover"] > div:nth-child(2) { animation-delay: 20ms; }
+[data-testid="stTopNavPopover"] > div:nth-child(3) { animation-delay: 40ms; }
+[data-testid="stTopNavPopover"] > div:nth-child(4) { animation-delay: 60ms; }
+[data-testid="stTopNavPopover"] > div:nth-child(5) { animation-delay: 80ms; }
+[data-testid="stTopNavPopover"] > div:nth-child(6) { animation-delay: 100ms; }
+@keyframes xad-menu-in {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes xad-menu-item {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+[data-testid="stTopNavDropdownLink"] {
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: 8px;
+    background-color: transparent !important;
+    transition: background-color 140ms ease, transform 160ms var(--ease-out);
+}
+[data-testid="stTopNavDropdownLink"] p {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+[data-testid="stTopNavDropdownLink"]:active {
+    transform: scale(0.98);
+}
+[data-testid="stTopNavDropdownLink"][aria-current="page"] {
+    background-color: rgba(217, 184, 114, 0.14) !important;
+}
+[data-testid="stTopNavDropdownLink"][aria-current="page"] p {
+    color: #D9B872;
+}
+@media (hover: hover) and (pointer: fine) {
+    [data-testid="stTopNavDropdownLink"]:hover {
+        background-color: rgba(217, 184, 114, 0.10) !important;
+    }
 }
 /* Page active et survol : teinte or au lieu du bleu par défaut de Streamlit */
 [data-testid="stTopNavLink"][aria-current="page"] {
@@ -517,35 +607,19 @@ span[data-testid="stIconMaterial"] {
         background-color: rgba(217, 184, 114, 0.10) !important;
     }
 }
-/* Écran moyen : on retire les icônes pour garder toutes les pages visibles */
+/* Écran moyen : le menu se rapproche du nom du site */
 @media (max-width: 1280px) {
     [data-testid="stTopNav"] {
         margin-left: 8.5rem;
-    }
-    [data-testid="stTopNavLink"] {
-        padding: 0 0.25rem;
-    }
-    [data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]) {
-        font-size: 0.75rem;
-        letter-spacing: 0.02em;
     }
     /* Sur un écran moyen, les boutons ajoutés par Streamlit Cloud (Share, Fork...) laissent la place aux onglets */
     [data-testid="stToolbarActions"] {
         display: none;
     }
 }
-/* Petit écran d'ordinateur : le menu se resserre pour garder toutes les pages sur la ligne */
 @media (max-width: 1100px) {
     [data-testid="stTopNav"] {
         margin-left: 7.5rem;
-        margin-right: var(--space-8);
-    }
-    [data-testid="stTopNavLink"] {
-        padding: 0 0.125rem;
-    }
-    [data-testid="stTopNavLink"] p, [data-testid="stTopNavLink"] span:not([data-testid="stIconMaterial"]) {
-        font-size: 0.6875rem;
-        letter-spacing: 0;
     }
 }
 /* Téléphone : le menu est replié par Streamlit, le nom se place après son bouton */
@@ -775,6 +849,10 @@ span[data-testid="stIconMaterial"] {
     opacity: 0;
     pointer-events: none;
     transition: transform 240ms var(--ease-out), width 240ms var(--ease-out), opacity 160ms ease;
+}
+.xad-has-glide [data-testid="stTopNavSection"] {
+    position: relative;
+    z-index: 1;
 }
 .xad-has-glide [data-testid="stTopNavLink"],
 .xad-has-glide [data-testid="stTopNavLink"]:hover,
@@ -1213,6 +1291,12 @@ button:active {
         animation: xad-fade 200ms ease backwards;
     }
     .xad-dot-cursor {
+        transition: none;
+    }
+    [data-testid="stTopNavPopover"], [data-testid="stTopNavPopover"] > div {
+        animation: xad-fade 120ms ease backwards;
+    }
+    [data-testid="stTopNavSection"] > div[aria-hidden]::after {
         transition: none;
     }
     .xad-news-title {
@@ -2012,7 +2096,11 @@ MOTION_SCRIPT = """
         glide.style.opacity = "1";
     }
     function activeLink() {
-        return document.querySelector('[data-testid="stTopNavLink"][aria-current="page"]');
+        // Menu ouvert, ou page d'une classe d'actifs : la pastille reste sur Assets. L'accueil ("/") n'a pas de pastille.
+        const assets = document.querySelector('[data-testid="stTopNavSection"]');
+        if (assets && assets.getAttribute("aria-expanded") === "true") { return assets; }
+        const current = document.querySelector('[data-testid="stTopNavLink"][aria-current="page"]');
+        return current || (location.pathname === "/" ? null : assets);
     }
     function setupGlide() {
         const nav = document.querySelector('[data-testid="stTopNav"]');
@@ -2029,7 +2117,8 @@ MOTION_SCRIPT = """
     }
     document.addEventListener("pointerover", function (event) {
         if (!event.target.closest) { return; }
-        const link = event.target.closest('[data-testid="stTopNavLink"]');
+        if (event.target.closest('[data-testid="stTopNavPopoverBody"]')) { return; }
+        const link = event.target.closest('[data-testid="stTopNavLink"], [data-testid="stTopNavSection"]');
         if (link) {
             hoveredLink = link;
             moveGlide(link);
@@ -3108,11 +3197,12 @@ home_page = st.Page(render_home_page, title="Home", default=True, visibility="hi
 comparator_page = st.Page(render_comparator_page, title="Comparator", url_path="comparator")
 portfolio_page = st.Page(render_portfolio_page, title="Portfolio", url_path="portfolio")
 news_page = st.Page(render_news_page, title="News", url_path="news")
-all_pages = [home_page, news_page, *CLASS_PAGES.values(), comparator_page, portfolio_page]
 
 # À l'ouverture du site, on reste sur la page d'entrée tant que le visiteur n'a pas défilé jusqu'au bout. Elle n'est pas dans le menu : on n'y revient pas.
 entered = st.session_state.get("entered", False)
-current_page = st.navigation(all_pages, position="top" if entered else "hidden")
+# Les classes d'actifs sont regroupées dans le menu déroulant "Assets" ; le CSS place ce menu juste après News.
+navigation_menu = {"": [home_page, news_page, comparator_page, portfolio_page], "Assets": list(CLASS_PAGES.values())}
+current_page = st.navigation(navigation_menu, position="top" if entered else "hidden")
 is_home = current_page.url_path == ""
 
 # Animations communes à tout le site : chargées dès l'ouverture, car la visite guidée s'affiche sur la page d'entrée
